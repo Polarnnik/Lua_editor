@@ -121,3 +121,12 @@ export interface LuaProgram {
   type: 'Program';
   body: LuaStatement[];
 }
+
+// ─── Language-agnostic псевдонимы ─────────────────────────────────────────────
+// Публичный контракт (NodeCodegen, GeneratorContext, TraverseFn) использует
+// эти имена — без привязки к конкретному языку.
+// backends/lua.ts внутри может использовать LuaXxx напрямую.
+
+export type Expr    = LuaExpression;
+export type Stmt    = LuaStatement;
+export type Program = LuaProgram;
