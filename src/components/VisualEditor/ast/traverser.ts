@@ -1,117 +1,90 @@
 import { Node, Edge } from '@xyflow/react';
-import { LuaExpression, LuaStatement } from './types';
-import { GeneratorContext, NodeGenerator, TraverseFn } from '../generators/types';
+import { Expr, Stmt } from './types';
+import { GeneratorContext, NodeCodegen } from '../types';
+import { NodeRegistry } from '../nodeRegistry';
 
-const DEBUG = true;
-
-function debug(label: string, ...args: any[]) {
-  if (DEBUG) {
-    console.log(`[AST] ${label}`, ...args);
-  }
-}
+// ASTTraverser больше не принимает отдельный generators map.
+// Он получает NodeRegistry и достаёт codegen прямо из NodeDefinition.
 
 export class ASTTraverser {
   private nodes: Node[];
   private edges: Edge[];
-  private generators: Record<string, NodeGenerator>;
-  
-  private evaluatedNodes: Map<string, LuaExpression> = new Map();
+  private registry: NodeRegistry;
+  private evaluatedNodes: Map<string, Expr> = new Map();
 
-  constructor(nodes: Node[], edges: Edge[], generators: Record<string, NodeGenerator>) {
+  constructor(nodes: Node[], edges: Edge[], registry: NodeRegistry) {
     this.nodes = nodes;
     this.edges = edges;
-    this.generators = generators;
+    this.registry = registry;
   }
 
-  traverse(fromNodeId: string, sourceHandle: string): LuaStatement[] {
-    const statements: LuaStatement[] = [];
-    
-    const outgoingEdges = this.edges.filter(e => 
-      e.source === fromNodeId && e.sourceHandle === sourceHandle
+  traverse(fromNodeId: string, sourceHandle: string): Stmt[] {
+    const statements: Stmt[] = [];
+
+    const outgoingEdges = this.edges.filter(
+      (e) => e.source === fromNodeId && e.sourceHandle === sourceHandle,
     );
-    
-    debug(`  traverse("${sourceHandle}") от ${fromNodeId}, связей: ${outgoingEdges.length}`);
 
     for (const edge of outgoingEdges) {
-      const targetNode = this.nodes.find(n => n.id === edge.target);
+      const targetNode = this.nodes.find((n) => n.id === edge.target);
       if (!targetNode) continue;
-
-      const nodeStatements = this.generateNodeStatements(targetNode);
-      statements.push(...nodeStatements);
+      statements.push(...this.executeNode(targetNode));
     }
 
     return statements;
   }
 
-  private generateNodeStatements(node: Node): LuaStatement[] {
-    const generator = this.generators[node.type];
-    if (!generator) {
-      debug(`  Нет генератора для ${node.type}`);
-      return [];
-    }
+  private executeNode(node: Node): Stmt[] {
+    const def = this.registry.get(node.type!);
+    if (!def) return [];
+
+    const codegen = def.codegen as NodeCodegen;
+    if (!('execute' in codegen)) return [];
 
     const ctx = this.createContext(node);
-
-    if ('execute' in generator) {
-      debug(`  ${node.type}: execute()`);
-      return generator.execute(node, ctx, (handle) => this.traverse(node.id, handle));
-    }
-
-    return [];
+    return codegen.execute(
+      node as any,
+      ctx,
+      (handle) => this.traverse(node.id, handle),
+    );
   }
 
-  evaluateExpression(node: Node): LuaExpression {
+  evaluateExpression(node: Node): Expr {
     const cached = this.evaluatedNodes.get(node.id);
     if (cached) return cached;
 
-    const generator = this.generators[node.type];
-    if (!generator || !('evaluate' in generator)) {
-      return { type: 'Literal', value: null, raw: 'nil' };
-    }
+    const def = this.registry.get(node.type!);
+    if (!def) return { type: 'Literal', value: null, raw: 'nil' };
+
+    const codegen = def.codegen as NodeCodegen;
+    if (!('evaluate' in codegen)) return { type: 'Literal', value: null, raw: 'nil' };
 
     const ctx = this.createContext(node);
-    const result = generator.evaluate(node, ctx);
-    
+    const result = codegen.evaluate(node as any, ctx);
     this.evaluatedNodes.set(node.id, result);
-    
     return result;
   }
 
   private createContext(node: Node): GeneratorContext {
     return {
-      getInput: (handleId: string): LuaExpression => {
+      getInput: (handleId: string): Expr => {
         const sourceNode = this.resolveSourceNode(node.id, handleId);
-        if (!sourceNode) {
-          debug(`  ctx.getInput("${handleId}"): нет связи -> nil`);
-          return { type: 'Literal', value: null, raw: 'nil' };
-        }
-        
-        debug(`  ctx.getInput("${handleId}"): от ${sourceNode.type} ${sourceNode.id}`);
+        if (!sourceNode) return { type: 'Literal', value: null, raw: 'nil' };
         return this.evaluateExpression(sourceNode);
       },
-      
-      getInputDefault: (handleId: string, fallback: LuaExpression): LuaExpression => {
+      getInputDefault: (handleId: string, fallback: Expr): Expr => {
         const sourceNode = this.resolveSourceNode(node.id, handleId);
-        if (!sourceNode) {
-          debug(`  ctx.getInputDefault("${handleId}"): нет связи -> fallback`);
-          return fallback;
-        }
-        
+        if (!sourceNode) return fallback;
         return this.evaluateExpression(sourceNode);
-      }
+      },
     };
   }
 
-  
-  // Находит исходный узел подключенный к указанному пину
-
   private resolveSourceNode(targetNodeId: string, targetHandleId: string): Node | null {
-    const edge = this.edges.find(e => 
-      e.target === targetNodeId && e.targetHandle === targetHandleId
+    const edge = this.edges.find(
+      (e) => e.target === targetNodeId && e.targetHandle === targetHandleId,
     );
-    
     if (!edge) return null;
-    
-    return this.nodes.find(n => n.id === edge.source) || null;
+    return this.nodes.find((n) => n.id === edge.source) || null;
   }
 }
