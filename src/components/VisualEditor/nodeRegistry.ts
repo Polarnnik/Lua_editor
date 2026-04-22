@@ -1,31 +1,20 @@
-import React from 'react';
-import { NodeProps } from '@xyflow/react';
-import { PinType } from './types';
+import React from "react";
+import { NodeProps } from "@xyflow/react";
+import { NodeDefinition } from "./types";
 
-export interface Pin {
-  id: string;
-  label: string;
-  type: PinType;
-}
-
-export interface NodeDefinition {
-  type: string;
-  label: string;
-  color: string;
-  inputs?: Pin[];
-  outputs?: Pin[];
-  component: React.ComponentType<NodeProps>;
-  defaultData?: Record<string, unknown>;
-}
-
-class NodeRegistry {
+export class NodeRegistry {
   private nodes: Map<string, NodeDefinition> = new Map();
 
-  register(definition: NodeDefinition): void {
-    if (this.nodes.has(definition.type)) {
-      console.warn(`Node type "${definition.type}" is already registered. Overwriting.`);
+  init(defs: NodeDefinition[]): void {
+    this.nodes.clear();
+    for (const def of defs) {
+      if (this.nodes.has(def.type)) {
+        console.warn(
+          `[NodeRegistry] Дублирующийся тип узла: "${def.type}". Перезаписывается.`,
+        );
+      }
+      this.nodes.set(def.type, def);
     }
-    this.nodes.set(definition.type, definition);
   }
 
   get(type: string): NodeDefinition | undefined {
@@ -36,13 +25,20 @@ class NodeRegistry {
     return Array.from(this.nodes.values());
   }
 
-  getNodeTypes(): Record<string, React.ComponentType<NodeProps>> {
+  getReactFlowTypes(): Record<string, React.ComponentType<NodeProps>> {
     const types: Record<string, React.ComponentType<NodeProps>> = {};
     for (const [type, def] of this.nodes) {
       types[type] = def.component;
     }
     return types;
   }
-}
 
-export const nodeRegistry = new NodeRegistry();
+  getCategories(): Record<string, NodeDefinition[]> {
+    const categories: Record<string, NodeDefinition[]> = {};
+    for (const def of this.nodes.values()) {
+      if (!categories[def.category]) categories[def.category] = [];
+      categories[def.category].push(def);
+    }
+    return categories;
+  }
+}
