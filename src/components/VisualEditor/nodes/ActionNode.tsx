@@ -1,6 +1,7 @@
 import { NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import { nodeRegistry } from '../nodeRegistry';
+import { NodeDefinition } from '../types';
+import { call, exprStmt } from '../ast/builders';
 
 export function ActionNode({ data, selected }: NodeProps) {
   return (
@@ -17,9 +18,10 @@ export function ActionNode({ data, selected }: NodeProps) {
   );
 }
 
-nodeRegistry.register({
+export const actionPrintDef: NodeDefinition = {
   type: 'action_print',
   label: 'Печать (Print)',
+  category: 'Действия',
   color: '#2563eb',
   inputs: [
     { id: 'exec_in', label: 'Выполнение', type: 'exec' },
@@ -27,4 +29,10 @@ nodeRegistry.register({
   ],
   outputs: [{ id: 'exec_out', label: 'Выполнение', type: 'exec' }],
   component: ActionNode,
-});
+  codegen: {
+    execute: (_node, ctx, traverse) => [
+      exprStmt(call('print', [ctx.getInput('value')])),
+      ...traverse('exec_out'),
+    ],
+  },
+};

@@ -1,6 +1,6 @@
 import { NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import { nodeRegistry } from '../nodeRegistry';
+import { NodeDefinition } from '../types';
 
 export function EventNode({ data, selected }: NodeProps) {
   return (
@@ -13,10 +13,14 @@ export function EventNode({ data, selected }: NodeProps) {
   );
 }
 
-nodeRegistry.register({
+export const eventStartDef: NodeDefinition = {
   type: 'event_start',
   label: 'Старт события',
+  category: 'События',
   color: '#dc2626',
   outputs: [{ id: 'exec_out', label: 'Выполнение', type: 'exec' }],
   component: EventNode,
-});
+  codegen: {
+    execute: (_node, _ctx, traverse) => traverse('exec_out'),
+  },
+};

@@ -1,6 +1,7 @@
 import { NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import { nodeRegistry } from '../nodeRegistry';
+import { NodeDefinition } from '../types';
+import { ifStmt, literal } from '../ast/builders';
 
 export function LogicNode({ data, selected }: NodeProps) {
   return (
@@ -20,9 +21,10 @@ export function LogicNode({ data, selected }: NodeProps) {
   );
 }
 
-nodeRegistry.register({
+export const logicIfDef: NodeDefinition = {
   type: 'logic_if',
   label: 'Условие (If)',
+  category: 'Логика',
   color: '#9ca3af',
   inputs: [
     { id: 'exec_in', label: 'Выполнение', type: 'exec' },
@@ -33,4 +35,13 @@ nodeRegistry.register({
     { id: 'exec_false', label: 'Ложь', type: 'exec' },
   ],
   component: LogicNode,
-});
+  codegen: {
+    execute: (_node, ctx, traverse) => [
+      ifStmt(
+        ctx.getInputDefault('condition', literal(false)),
+        traverse('exec_true'),
+        traverse('exec_false'),
+      ),
+    ],
+  },
+};
