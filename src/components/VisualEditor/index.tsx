@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -11,179 +11,239 @@ import {
   Edge,
   Node,
   ReactFlowProvider,
-  Panel
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
+import { CodeBackend, NodeDefinition } from './types';
+import { NodeRegistry } from './nodeRegistry';
+import { CodeGenerator } from './generators/CodeGenerator';
+import { luaBackend } from './backends/lua';
+import { ContextMenu, ContextMenuState } from './components/ContextMenu';
+import { ConnectionValidator } from './core/ConnectionValidator';
 
-import './nodes/EventNode';
-import './nodes/ActionNode';
-import './nodes/ValueNode';
-import './nodes/LogicNode';
-import './nodes/MathNode';
-import './nodes/CompareNode';
-import { nodeRegistry } from './nodeRegistry';
-import { CodeGenerator, luaBackend } from './generators';
+// ─── Props ────────────────────────────────────────────────────────────────────
 
-const nodeTypes = nodeRegistry.getNodeTypes();
+export interface VisualEditorProps {
+  /** Узлы доступные в редакторе. Снаружи: builtinNodes + кастомные. */
+  nodes: NodeDefinition[];
+  /** Языковой бэкенд. По умолчанию — luaBackend. */
+  backend?: CodeBackend;
+  /** Вызывается при каждом изменении графа со свежесгенерированным кодом. */
+  onCodeChange?: (code: string) => void;
+  initialNodes?: Node[];
+  initialEdges?: Edge[];
+}
 
-const initialNodes: Node[] = [
-  { id: '1', type: 'event_start', position: { x: 100, y: 100 }, data: { label: 'Старт события' } },
-];
-const initialEdges: Edge[] = [];
+// ─── Внутренний компонент (внутри ReactFlowProvider) ─────────────────────────
 
-export function VisualEditor() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [menu, setMenu] = useState<{ id: string, type: 'node' | 'edge', top: number, left: number } | null>(null);
+function VisualEditorInner({
+  nodes: nodeDefs,
+  backend = luaBackend,
+  onCodeChange,
+  initialNodes: initNodes = [],
+  initialEdges: initEdges = [],
+}: VisualEditorProps) {
+  const { screenToFlowPosition } = useReactFlow();
 
-  const onConnect = useCallback(
-    (params: Connection | Edge) => setEdges((eds) => addEdge({ ...params, animated: params.sourceHandle?.startsWith('exec') }, eds)),
-    [setEdges],
+  const registry = useRef(new NodeRegistry());
+  registry.current.init(nodeDefs);
+
+  const validator = useRef(new ConnectionValidator(registry.current));
+  // validator держит ссылку на registry — registry.current уже обновлён выше
+
+  const nodeTypes = useMemo(
+    () => registry.current.getReactFlowTypes(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodeDefs],
   );
 
-  const addNode = (type: string, label: string, extraData: Record<string, unknown> = {}) => {
-    const nodeDef = nodeRegistry.get(type);
-    const newNode: Node = {
-      id: uuidv4(),
-      type,
-      position: { x: Math.random() * 200 + 100, y: Math.random() * 200 + 100 },
-      data: { label, ...nodeDef?.defaultData, ...extraData },
-    };
-    setNodes((nds) => nds.concat(newNode));
-  };
-
-  const handleGenerate = () => {
-    const generator = new CodeGenerator(luaBackend);
-    const code = generator.generate(nodes, edges);
-    setGeneratedCode(code);
-  };
-
-  const onNodeContextMenu = useCallback(
-    (event: React.MouseEvent, node: Node) => {
-      event.preventDefault();
-      setMenu({ id: node.id, type: 'node', top: event.clientY, left: event.clientX });
+  const defaultInitialNodes: Node[] = initNodes.length > 0 ? initNodes : [
+    {
+      id: 'event_start-init',
+      type: 'event_start',
+      position: { x: 160, y: 160 },
+      data: { label: 'Старт события' },
     },
-    [setMenu]
-  );
+  ];
 
-  const onEdgeContextMenu = useCallback(
-    (event: React.MouseEvent, edge: Edge) => {
-      event.preventDefault();
-      setMenu({ id: edge.id, type: 'edge', top: event.clientY, left: event.clientX });
+  const [nodes, setNodes, onNodesChange] = useNodesState(defaultInitialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges);
+  const [menu, setMenu] = useState<ContextMenuState>(null);
+
+  // ── Кодогенерация — внутри редактора ─────────────────────────────────────
+  // Вызывается при каждом изменении графа. Пользователь получает готовую строку.
+  const generateCode = useCallback(
+    (nextNodes: Node[], nextEdges: Edge[]) => {
+      if (!onCodeChange) return;
+      const generator = new CodeGenerator(registry.current, backend);
+      onCodeChange(generator.generate(nextNodes, nextEdges));
     },
-    [setMenu]
+    [backend, onCodeChange],
   );
 
-  const onPaneClick = useCallback(() => setMenu(null), [setMenu]);
+  // Генерируем сразу при монтировании если есть колбэк
+  useEffect(() => {
+    generateCode(nodes, edges);
+    // только при монтировании
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const deleteElement = useCallback(() => {
-    if (!menu) return;
-    if (menu.type === 'node') {
-      setNodes((nds) => nds.filter((n) => n.id !== menu.id));
-      setEdges((eds) => eds.filter((e) => e.source !== menu.id && e.target !== menu.id));
-    } else {
-      setEdges((eds) => eds.filter((e) => e.id !== menu.id));
-    }
-    setMenu(null);
-  }, [menu, setNodes, setEdges]);
+  // ── Валидация перед созданием связи ──────────────────────────────────────
+  const isValidConnection = useCallback(
+    (connection: Connection) =>
+      validator.current.isValid(connection, nodes, edges),
+    [nodes, edges],
+  );
+
+  // ── Connections ───────────────────────────────────────────────────────────
+  const handleConnect = useCallback(
+    (params: Connection | Edge) => {
+      setEdges((eds) => {
+        const next = addEdge(
+          { ...params, animated: Boolean(params.sourceHandle?.startsWith('exec')) },
+          eds,
+        );
+        generateCode(nodes, next);
+        return next;
+      });
+    },
+    [setEdges, generateCode, nodes],
+  );
+
+  // ── Изменения нод и рёбер (перемещение, выделение и т.д.) ────────────────
+  const handleNodesChange: typeof onNodesChange = useCallback(
+    (changes) => {
+      onNodesChange(changes);
+      // nodes ещё не обновились в этом рендере — берём следующий тик
+      setTimeout(() => generateCode(nodes, edges), 0);
+    },
+    [onNodesChange, generateCode, nodes, edges],
+  );
+
+  const handleEdgesChange: typeof onEdgesChange = useCallback(
+    (changes) => {
+      onEdgesChange(changes);
+      setTimeout(() => generateCode(nodes, edges), 0);
+    },
+    [onEdgesChange, generateCode, nodes, edges],
+  );
+
+  // ── Добавление узла из контекстного меню ─────────────────────────────────
+  const handleAddNode = useCallback(
+    (type: string, flowPosition: { x: number; y: number }) => {
+      const def = registry.current.get(type);
+      if (!def) return;
+      const newNode: Node = {
+        id: `${type}-${nanoid(6)}`,
+        type,
+        position: flowPosition,
+        data: { label: def.label, ...def.defaultData },
+      };
+      setNodes((nds) => {
+        const next = nds.concat(newNode);
+        generateCode(next, edges);
+        return next;
+      });
+    },
+    [setNodes, generateCode, edges],
+  );
+
+  // ── Удаление ──────────────────────────────────────────────────────────────
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => {
+        const nextNodes = nds.filter((n) => n.id !== nodeId);
+        setEdges((eds) => {
+          const nextEdges = eds.filter((e) => e.source !== nodeId && e.target !== nodeId);
+          generateCode(nextNodes, nextEdges);
+          return nextEdges;
+        });
+        return nextNodes;
+      });
+    },
+    [setNodes, setEdges, generateCode],
+  );
+
+  const handleDeleteEdge = useCallback(
+    (edgeId: string) => {
+      setEdges((eds) => {
+        const next = eds.filter((e) => e.id !== edgeId);
+        generateCode(nodes, next);
+        return next;
+      });
+    },
+    [setEdges, generateCode, nodes],
+  );
+
+  // ── Контекстное меню ──────────────────────────────────────────────────────
+  const onPaneContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      setMenu({ kind: 'canvas', x: e.clientX, y: e.clientY, flowX: flowPos.x, flowY: flowPos.y });
+    },
+    [screenToFlowPosition],
+  );
+
+  const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ kind: 'node', x: e.clientX, y: e.clientY, nodeId: node.id });
+  }, []);
+
+  const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ kind: 'edge', x: e.clientX, y: e.clientY, edgeId: edge.id });
+  }, []);
+
+  const closeMenu = useCallback(() => setMenu(null), []);
 
   return (
-    <div className="flex h-full w-full bg-zinc-50 text-zinc-900 font-sans">
-      <div className="w-64 bg-white border-r border-zinc-200 p-4 flex flex-col gap-4 overflow-y-auto">
-        <h2 className="text-lg font-bold text-zinc-900">Узлы</h2>
-        
-        <div className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">События</h3>
-          <button onClick={() => addNode('event_start', 'Старт события')} className="bg-zinc-50 hover:bg-zinc-100 text-left px-3 py-2 rounded text-sm transition-colors border border-zinc-200 text-zinc-800">Старт события</button>
-        </div>
+    <div className="relative h-full w-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onConnect={handleConnect}
+        isValidConnection={isValidConnection}
+        onPaneContextMenu={onPaneContextMenu}
+        onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
+        onPaneClick={closeMenu}
+        onNodeClick={closeMenu}
+        onEdgeClick={closeMenu}
+        onMove={closeMenu}
+        deleteKeyCode={['Backspace', 'Delete']}
+        nodeTypes={nodeTypes}
+        fitView
+        colorMode="light"
+      >
+        <Background color="#e4e4e7" gap={16} />
+        <Controls />
+        <MiniMap nodeColor="#d4d4d8" maskColor="rgba(255,255,255,0.5)" />
+      </ReactFlow>
 
-        <div className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Действия</h3>
-          <button onClick={() => addNode('action_print', 'Печать (Print)')} className="bg-zinc-50 hover:bg-zinc-100 text-left px-3 py-2 rounded text-sm transition-colors border border-zinc-200 text-zinc-800">Печать (Print)</button>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Значения</h3>
-          <button onClick={() => addNode('value_string', 'Строка', { valueType: 'string' })} className="bg-zinc-50 hover:bg-zinc-100 text-left px-3 py-2 rounded text-sm transition-colors border border-zinc-200 text-zinc-800">Строка</button>
-          <button onClick={() => addNode('value_number', 'Число', { valueType: 'number' })} className="bg-zinc-50 hover:bg-zinc-100 text-left px-3 py-2 rounded text-sm transition-colors border border-zinc-200 text-zinc-800">Число</button>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Логика</h3>
-          <button onClick={() => addNode('logic_if', 'Условие (If)')} className="bg-zinc-50 hover:bg-zinc-100 text-left px-3 py-2 rounded text-sm transition-colors border border-zinc-200 text-zinc-800">Условие (If)</button>
-          <button onClick={() => addNode('logic_math', 'Математика')} className="bg-zinc-50 hover:bg-zinc-100 text-left px-3 py-2 rounded text-sm transition-colors border border-zinc-200 text-zinc-800">Математика</button>
-          <button onClick={() => addNode('logic_compare', 'Сравнение')} className="bg-zinc-50 hover:bg-zinc-100 text-left px-3 py-2 rounded text-sm transition-colors border border-zinc-200 text-zinc-800">Сравнение</button>
-        </div>
-      </div>
-
-      <div className="flex-1 relative">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeContextMenu={onNodeContextMenu}
-          onEdgeContextMenu={onEdgeContextMenu}
-          onPaneClick={onPaneClick}
-          onNodeClick={onPaneClick}
-          onEdgeClick={onPaneClick}
-          deleteKeyCode={['Backspace', 'Delete']}
-          nodeTypes={nodeTypes}
-          fitView
-          className="bg-zinc-50"
-          colorMode="light"
-        >
-          <Background color="#e4e4e7" gap={16} />
-          <Controls className="bg-white border-zinc-200 fill-zinc-700" />
-          <MiniMap nodeColor="#d4d4d8" maskColor="rgba(255, 255, 255, 0.5)" className="bg-white" />
-          
-          <Panel position="top-right" className="flex gap-2">
-            <button 
-              onClick={handleGenerate}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md font-medium shadow-lg transition-colors"
-            >
-              Сгенерировать Lua
-            </button>
-          </Panel>
-        </ReactFlow>
-        
-        {menu && (
-          <div
-            style={{ top: menu.top, left: menu.left }}
-            className="fixed z-50 bg-white border border-zinc-200 rounded shadow-xl py-1 min-w-[120px]"
-            onMouseLeave={() => setMenu(null)}
-          >
-            <button
-              onClick={deleteElement}
-              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-            >
-              Удалить {menu.type === 'node' ? 'узел' : 'связь'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="w-80 bg-white border-l border-zinc-200 flex flex-col">
-        <div className="p-4 border-b border-zinc-200">
-          <h2 className="text-lg font-bold text-zinc-900">Сгенерированный код</h2>
-        </div>
-        <div className="flex-1 p-4 overflow-y-auto">
-          <pre className="font-mono text-sm text-green-700 whitespace-pre-wrap">
-            {generatedCode || '-- Нажмите "Сгенерировать Lua", чтобы увидеть код'}
-          </pre>
-        </div>
-      </div>
+      <ContextMenu
+        menu={menu}
+        categories={registry.current.getCategories()}
+        onAddNode={handleAddNode}
+        onDeleteNode={handleDeleteNode}
+        onDeleteEdge={handleDeleteEdge}
+        onClose={closeMenu}
+      />
     </div>
   );
 }
 
-export default function VisualEditorWrapper() {
+// ─── Публичный экспорт ────────────────────────────────────────────────────────
+
+export default function VisualEditor(props: VisualEditorProps) {
   return (
     <ReactFlowProvider>
-      <VisualEditor />
+      <VisualEditorInner {...props} />
     </ReactFlowProvider>
   );
 }
