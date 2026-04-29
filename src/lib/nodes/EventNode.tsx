@@ -1,6 +1,7 @@
 import { NodeProps } from "@xyflow/react";
 import { BaseNode } from "./BaseNode";
 import { NodeDefinition } from "../types";
+import { funcDecl } from "../ast/builders";
 
 export function EventNode({ data, selected }: NodeProps) {
   return (
@@ -22,6 +23,8 @@ export const eventStartDef: NodeDefinition<{ label?: string }> = {
   outputs: [{ id: "exec_out", label: "Выполнение", type: "exec" }],
   component: EventNode,
   codegen: {
-    execute: (_node, _ctx, traverse) => traverse("exec_out"),
+    execute: (_node, _ctx, traverse) => [
+      funcDecl("onStart", [], traverse("exec_out")),
+    ],
   },
 };
