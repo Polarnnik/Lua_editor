@@ -84,8 +84,10 @@ function stmt(node: LuaStatement, indent = 0): string {
       );
     case "BreakStatement":
       return pad(indent) + "break\n";
-    default:
-      return pad(indent) + `-- unsupported: ${(node as any).type}\n`;
+    default: {
+      const _exhaustive: never = node;
+      return pad(indent) + `-- unsupported: ${(_exhaustive as { type: string }).type}\n`;
+    }
   }
 }
 
@@ -125,8 +127,10 @@ function expr(node: LuaExpression): string {
           .join(", ") +
         "}"
       );
-    default:
-      return `--[[unsupported: ${(node as any).type}]]`;
+    default: {
+      const _exhaustive: never = node;
+      return `--[[unsupported: ${(_exhaustive as { type: string }).type}]]`;
+    }
   }
 }
 
