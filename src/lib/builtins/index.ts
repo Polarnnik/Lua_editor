@@ -13,7 +13,7 @@ import { whileNodeDef, forNodeDef, returnNodeDef } from "../nodes/FlowControlNod
 import { boolNodeDef, notNodeDef, boolOpNodeDef } from "../nodes/LogicNodes";
 import { concatNodeDef, strLenNodeDef, convertNodeDef } from "../nodes/StringNodes";
 
-export const builtinNodes: NodeDefinition<any>[] = [
+export const builtinNodes: readonly NodeDefinition[] = [
   // Events
   eventStartDef,
   // Functions
