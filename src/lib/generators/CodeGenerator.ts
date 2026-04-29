@@ -1,5 +1,5 @@
 import { Node, Edge } from "@xyflow/react";
-import { program, funcDecl } from "../ast/builders";
+import { program } from "../ast/builders";
 import { Program } from "../ast/types";
 import { ASTTraverser } from "../ast/traverser";
 import { NodeRegistry } from "../nodeRegistry";
@@ -26,17 +26,10 @@ export class CodeGenerator {
 
     if (entryNodes.length === 0) return program([]);
 
-    const allStatements = entryNodes.flatMap((entryNode) => {
-      const traverser = new ASTTraverser(nodes, edges, this.registry);
-
-      if (entryNode.type === "event_start") {
-        // event_start wraps its body in onStart() — it has no codegen of its own.
-        const body = traverser.traverse(entryNode.id, "exec_out");
-        return [funcDecl("onStart", [], body)];
-      }
-
-      return traverser.executeEntry(entryNode);
-    });
+    const traverser = new ASTTraverser(nodes, edges, this.registry);
+    const allStatements = entryNodes.flatMap((entryNode) =>
+      traverser.executeEntry(entryNode),
+    );
 
     return program(allStatements);
   }
