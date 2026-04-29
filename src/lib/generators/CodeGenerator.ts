@@ -17,14 +17,27 @@ export class CodeGenerator {
   }
 
   private buildAST(nodes: Node[], edges: Edge[]): Program {
-    const startNodes = nodes.filter((n) => n.type === "event_start");
-    if (startNodes.length === 0) return program([]);
+    const entryTypes = new Set(
+      this.registry.getEntryNodes().map((d) => d.type),
+    );
+    const entryNodes = nodes.filter(
+      (n) => n.type !== undefined && entryTypes.has(n.type),
+    );
 
-    const allStatements = startNodes.flatMap((startNode) => {
+    if (entryNodes.length === 0) return program([]);
+
+    const allStatements = entryNodes.flatMap((entryNode) => {
       const traverser = new ASTTraverser(nodes, edges, this.registry);
-      return traverser.traverse(startNode.id, "exec_out");
+
+      if (entryNode.type === "event_start") {
+        // event_start wraps its body in onStart() — it has no codegen of its own.
+        const body = traverser.traverse(entryNode.id, "exec_out");
+        return [funcDecl("onStart", [], body)];
+      }
+
+      return traverser.executeEntry(entryNode);
     });
 
-    return program([funcDecl("onStart", [], allStatements)]);
+    return program(allStatements);
   }
 }
