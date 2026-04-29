@@ -7,11 +7,11 @@ import { PinType } from '../types';
 // number/string/boolean совместимы между собой только через any.
 
 const COMPATIBLE: Record<PinType, PinType[]> = {
-  exec:    ['exec'],
-  number:  ['number', 'any'],
-  string:  ['string', 'any'],
+  exec: ['exec'],
+  number: ['number', 'any'],
+  string: ['string', 'any'],
   boolean: ['boolean', 'any'],
-  any:     ['exec', 'number', 'string', 'boolean', 'any'],
+  any: ['exec', 'number', 'string', 'boolean', 'any'],
 };
 
 function typesCompatible(source: PinType, target: PinType): boolean {
@@ -25,7 +25,7 @@ function typesCompatible(source: PinType, target: PinType): boolean {
 function wouldCreateCycle(
   sourceId: string,
   targetId: string,
-  edges: Edge[],
+  edges: Edge[]
 ): boolean {
   const visited = new Set<string>();
   const stack = [targetId];
@@ -78,7 +78,7 @@ export class ConnectionValidator {
     // 6. Если пин не multi — проверяем что входящего ребра ещё нет
     if (!targetPin.multi) {
       const alreadyConnected = edges.some(
-        (e) => e.target === target && e.targetHandle === targetHandle,
+        (e) => e.target === target && e.targetHandle === targetHandle
       );
       if (alreadyConnected) return false;
     }

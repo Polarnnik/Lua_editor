@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from "react";
+} from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -21,9 +21,9 @@ import {
   ReactFlowProvider,
   useReactFlow,
   OnConnectEnd,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import { nanoid } from "nanoid";
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import { nanoid } from 'nanoid';
 import {
   CodeBackend,
   NodeDefinition,
@@ -31,19 +31,19 @@ import {
   defaultTheme,
   PinType,
   EditorError,
-} from "./types";
-import { NodeRegistry } from "./nodeRegistry";
-import { CodeGenerator } from "./generators/CodeGenerator";
-import { luaBackend } from "./backends/lua";
-import { ContextMenu, ContextMenuState } from "./components/ContextMenu";
-import { ConnectionValidator } from "./core/ConnectionValidator";
-import { ThemeProvider } from "./core/ThemeContext";
+} from './types';
+import { NodeRegistry } from './nodeRegistry';
+import { CodeGenerator } from './generators/CodeGenerator';
+import { luaBackend } from './backends/lua';
+import { ContextMenu, ContextMenuState } from './components/ContextMenu';
+import { ConnectionValidator } from './core/ConnectionValidator';
+import { ThemeProvider } from './core/ThemeContext';
 import {
   GraphStore,
   toGraphSnapshot,
   fromGraphSnapshot,
   GraphSnapshot,
-} from "./core/GraphStore";
+} from './core/GraphStore';
 
 // Одни и те же пустые массивы для всех рендеров, чтобы не было бесконечного цикла.
 const EMPTY_NODES: Node[] = [];
@@ -111,10 +111,10 @@ function VisualEditorInner({
       ? initNodes
       : [
           {
-            id: "event_start-init",
-            type: "event_start",
+            id: 'event_start-init',
+            type: 'event_start',
             position: { x: 160, y: 160 },
-            data: { label: "Старт события" },
+            data: { label: 'Старт события' },
           },
         ];
 
@@ -142,7 +142,7 @@ function VisualEditorInner({
         setNodes(snap.nodes);
         setEdges(snap.edges);
         onChange?.(toGraphSnapshot(snap));
-      },
+      }
     );
   }
 
@@ -156,10 +156,10 @@ function VisualEditorInner({
         ? initNodes
         : [
             {
-              id: "event_start-init",
-              type: "event_start",
+              id: 'event_start-init',
+              type: 'event_start',
               position: { x: 160, y: 160 },
-              data: { label: "Старт события" },
+              data: { label: 'Старт события' },
             } as Node,
           ];
     store.current!.load({ nodes: seeds, edges: initEdges });
@@ -174,17 +174,17 @@ function VisualEditorInner({
       const ctrl = e.ctrlKey || e.metaKey;
       if (!ctrl) return;
 
-      if (e.key === "z" && !e.shiftKey) {
+      if (e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         store.current!.undo();
         return;
       }
-      if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
+      if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
         e.preventDefault();
         store.current!.redo();
         return;
       }
-      if (e.key === "d") {
+      if (e.key === 'd') {
         e.preventDefault();
         const currentNodes = nodesRef.current;
         const currentEdges = edgesRef.current;
@@ -203,7 +203,7 @@ function VisualEditorInner({
         pushSnapshot(next, currentEdges);
         return;
       }
-      if (e.key === "c") {
+      if (e.key === 'c') {
         e.preventDefault();
         const selected = nodesRef.current.filter((n) => n.selected);
         if (!selected.length) return;
@@ -211,7 +211,7 @@ function VisualEditorInner({
         setHasClipboard(true);
         return;
       }
-      if (e.key === "v") {
+      if (e.key === 'v') {
         e.preventDefault();
         if (!clipboard.current.length) return;
         const currentNodes = nodesRef.current;
@@ -230,7 +230,7 @@ function VisualEditorInner({
         pushSnapshot(next, currentEdges);
       }
     },
-    [pushSnapshot, setNodes],
+    [pushSnapshot, setNodes]
   );
 
   useImperativeHandle(
@@ -240,15 +240,15 @@ function VisualEditorInner({
         try {
           return new CodeGenerator(registry, backend, onError).generate(
             nodesRef.current,
-            edgesRef.current,
+            edgesRef.current
           );
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           onError?.({
-            kind: "unsupported_ast_variant",
+            kind: 'unsupported_ast_variant',
             message: `Непредвиденная ошибка генерации кода: ${message}`,
           });
-          return "";
+          return '';
         }
       },
       getGraph() {
@@ -273,13 +273,13 @@ function VisualEditorInner({
         return store.current!.canRedo();
       },
     }),
-    [registry, backend, onError],
+    [registry, backend, onError]
   );
 
   const isValidConnection = useCallback(
     (connection: Connection) =>
       validator.current.isValid(connection, nodesRef.current, edgesRef.current),
-    [],
+    []
   );
 
   const handleConnect = useCallback(
@@ -288,15 +288,15 @@ function VisualEditorInner({
         const next = addEdge(
           {
             ...params,
-            animated: Boolean(params.sourceHandle?.startsWith("exec")),
+            animated: Boolean(params.sourceHandle?.startsWith('exec')),
           },
-          eds,
+          eds
         );
         pushSnapshot(nodesRef.current, next);
         return next;
       });
     },
-    [setEdges, pushSnapshot],
+    [setEdges, pushSnapshot]
   );
 
   const pendingConnection = useRef<{
@@ -307,7 +307,7 @@ function VisualEditorInner({
   const onConnectStart = useCallback(
     (
       _: unknown,
-      params: { nodeId: string | null; handleId: string | null },
+      params: { nodeId: string | null; handleId: string | null }
     ) => {
       if (params.nodeId && params.handleId) {
         pendingConnection.current = {
@@ -316,7 +316,7 @@ function VisualEditorInner({
         };
       }
     },
-    [],
+    []
   );
 
   const onConnectEnd: OnConnectEnd = useCallback(
@@ -325,15 +325,15 @@ function VisualEditorInner({
       pendingConnection.current = null;
 
       const target = event.target as HTMLElement;
-      if (target.closest(".react-flow__handle")) return;
+      if (target.closest('.react-flow__handle')) return;
       if (!pending) return;
 
       const sourceNode = nodesRef.current.find(
-        (n) => n.id === pending.sourceNodeId,
+        (n) => n.id === pending.sourceNodeId
       );
       if (!sourceNode) return;
 
-      const def = registry.get(sourceNode.type ?? "");
+      const def = registry.get(sourceNode.type ?? '');
       if (!def) return;
 
       const sourcePin = def.outputs?.find((p) => p.id === pending.sourceHandle);
@@ -346,7 +346,7 @@ function VisualEditorInner({
       });
 
       setMenu({
-        kind: "canvas",
+        kind: 'canvas',
         x: clientEvent.clientX,
         y: clientEvent.clientY,
         flowX: flowPos.x,
@@ -354,7 +354,7 @@ function VisualEditorInner({
         pinFilter: pinType,
       });
     },
-    [registry, screenToFlowPosition],
+    [registry, screenToFlowPosition]
   );
 
   const handleAddNode = useCallback(
@@ -373,7 +373,7 @@ function VisualEditorInner({
         return next;
       });
     },
-    [registry, setNodes, pushSnapshot],
+    [registry, setNodes, pushSnapshot]
   );
 
   const handleCopyNode = useCallback((nodeId: string) => {
@@ -399,7 +399,7 @@ function VisualEditorInner({
         return next;
       });
     },
-    [setNodes, pushSnapshot],
+    [setNodes, pushSnapshot]
   );
 
   const handlePaste = useCallback(
@@ -425,7 +425,7 @@ function VisualEditorInner({
         return next;
       });
     },
-    [setNodes, pushSnapshot],
+    [setNodes, pushSnapshot]
   );
 
   const handleDeleteNode = useCallback(
@@ -434,7 +434,7 @@ function VisualEditorInner({
         const nextNodes = nds.filter((n) => n.id !== nodeId);
         setEdges((eds) => {
           const nextEdges = eds.filter(
-            (e) => e.source !== nodeId && e.target !== nodeId,
+            (e) => e.source !== nodeId && e.target !== nodeId
           );
           pushSnapshot(nextNodes, nextEdges);
           return nextEdges;
@@ -442,7 +442,7 @@ function VisualEditorInner({
         return nextNodes;
       });
     },
-    [setNodes, setEdges, pushSnapshot],
+    [setNodes, setEdges, pushSnapshot]
   );
 
   const handleDeleteEdge = useCallback(
@@ -453,7 +453,7 @@ function VisualEditorInner({
         return next;
       });
     },
-    [setEdges, pushSnapshot],
+    [setEdges, pushSnapshot]
   );
 
   const onPaneContextMenu = useCallback(
@@ -461,26 +461,26 @@ function VisualEditorInner({
       e.preventDefault();
       const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       setMenu({
-        kind: "canvas",
+        kind: 'canvas',
         x: e.clientX,
         y: e.clientY,
         flowX: flowPos.x,
         flowY: flowPos.y,
       });
     },
-    [screenToFlowPosition],
+    [screenToFlowPosition]
   );
 
   const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
     e.preventDefault();
     e.stopPropagation();
-    setMenu({ kind: "node", x: e.clientX, y: e.clientY, nodeId: node.id });
+    setMenu({ kind: 'node', x: e.clientX, y: e.clientY, nodeId: node.id });
   }, []);
 
   const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
     e.preventDefault();
     e.stopPropagation();
-    setMenu({ kind: "edge", x: e.clientX, y: e.clientY, edgeId: edge.id });
+    setMenu({ kind: 'edge', x: e.clientX, y: e.clientY, edgeId: edge.id });
   }, []);
 
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -491,7 +491,7 @@ function VisualEditorInner({
         className="relative h-full w-full"
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        style={{ outline: "none" }}
+        style={{ outline: 'none' }}
       >
         <ReactFlow
           nodes={nodes}
@@ -509,9 +509,9 @@ function VisualEditorInner({
           onNodeClick={closeMenu}
           onEdgeClick={closeMenu}
           onMove={closeMenu}
-          deleteKeyCode={["Backspace", "Delete"]}
+          deleteKeyCode={['Backspace', 'Delete']}
           selectionOnDrag
-          selectionMode={"partial" as never}
+          selectionMode={'partial' as never}
           multiSelectionKeyCode="Shift"
           nodeTypes={nodeTypes}
           fitView
@@ -545,8 +545,8 @@ const VisualEditor = forwardRef<VisualEditorHandle, VisualEditorProps>(
     <ReactFlowProvider>
       <VisualEditorInner {...props} editorRef={ref} />
     </ReactFlowProvider>
-  ),
+  )
 );
 
-VisualEditor.displayName = "VisualEditor";
+VisualEditor.displayName = 'VisualEditor';
 export default VisualEditor;

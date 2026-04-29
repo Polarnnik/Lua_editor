@@ -1,4 +1,4 @@
-import { Node, Edge } from "@xyflow/react";
+import { Node, Edge } from '@xyflow/react';
 
 export interface SerializedNode {
   id: string;
@@ -29,7 +29,7 @@ export function toGraphSnapshot(live: LiveSnapshot): GraphSnapshot {
   return {
     nodes: live.nodes.map((n) => ({
       id: n.id,
-      type: n.type ?? "",
+      type: n.type ?? '',
       position: n.position,
       data: (n.data as Record<string, unknown>) ?? {},
     })),
@@ -37,8 +37,8 @@ export function toGraphSnapshot(live: LiveSnapshot): GraphSnapshot {
       id: e.id,
       source: e.source,
       target: e.target,
-      sourceHandle: e.sourceHandle ?? "",
-      targetHandle: e.targetHandle ?? "",
+      sourceHandle: e.sourceHandle ?? '',
+      targetHandle: e.targetHandle ?? '',
     })),
   };
 }

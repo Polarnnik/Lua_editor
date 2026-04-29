@@ -1,6 +1,6 @@
-import React from "react";
-import { NodeProps } from "@xyflow/react";
-import { NodeDefinition } from "./types";
+import React from 'react';
+import { NodeProps } from '@xyflow/react';
+import { NodeDefinition } from './types';
 
 export class NodeRegistry {
   private nodes: Map<string, NodeDefinition> = new Map();
@@ -10,7 +10,7 @@ export class NodeRegistry {
     for (const def of defs) {
       if (this.nodes.has(def.type)) {
         console.warn(
-          `[NodeRegistry] Duplicate node type: "${def.type}". Overwriting.`,
+          `[NodeRegistry] Duplicate node type: "${def.type}". Overwriting.`
         );
       }
       this.nodes.set(def.type, def);

@@ -1,17 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
-import { NodeDefinition, PinType } from "../types";
+import React, { useEffect, useRef, useState } from 'react';
+import { NodeDefinition, PinType } from '../types';
 
 export type ContextMenuState =
   | {
-      kind: "canvas";
+      kind: 'canvas';
       x: number;
       y: number;
       flowX: number;
       flowY: number;
       pinFilter?: PinType;
     }
-  | { kind: "node"; x: number; y: number; nodeId: string }
-  | { kind: "edge"; x: number; y: number; edgeId: string }
+  | { kind: 'node'; x: number; y: number; nodeId: string }
+  | { kind: 'edge'; x: number; y: number; edgeId: string }
   | null;
 
 interface ContextMenuProps {
@@ -40,15 +40,15 @@ export function ContextMenu({
   onClose,
 }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!menu) {
-      setSearch("");
+      setSearch('');
       return;
     }
-    if (menu.kind === "canvas") {
+    if (menu.kind === 'canvas') {
       setTimeout(() => searchRef.current?.focus(), 0);
     }
     const handleMouse = (e: MouseEvent) => {
@@ -56,27 +56,27 @@ export function ContextMenu({
         onClose();
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
-    document.addEventListener("mousedown", handleMouse);
-    document.addEventListener("keydown", handleKey);
+    document.addEventListener('mousedown', handleMouse);
+    document.addEventListener('keydown', handleKey);
     return () => {
-      document.removeEventListener("mousedown", handleMouse);
-      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener('mousedown', handleMouse);
+      document.removeEventListener('keydown', handleKey);
     };
   }, [menu, onClose]);
 
   if (!menu) return null;
 
   const style: React.CSSProperties = {
-    position: "fixed",
+    position: 'fixed',
     top: menu.y,
     left: menu.x,
     zIndex: 1000,
   };
 
   // ── Канвас — добавление узлов ─────────────────────────────────────────────
-  if (menu.kind === "canvas") {
+  if (menu.kind === 'canvas') {
     const pos = { x: menu.flowX, y: menu.flowY };
     const pinFilter = menu.pinFilter;
     const query = search.trim().toLowerCase();
@@ -90,15 +90,15 @@ export function ContextMenu({
               !query || def.label?.toLowerCase().includes(query);
             // Если drag от пина — фильтруем по совместимым пинам
             const matchesPin =
-              !pinFilter || pinFilter === "exec"
+              !pinFilter || pinFilter === 'exec'
                 ? !pinFilter || def.inputs?.some((p) => p.type === pinFilter)
                 : def.inputs?.some(
-                    (p) => p.type === pinFilter || p.type === "any",
+                    (p) => p.type === pinFilter || p.type === 'any'
                   );
             return matchesSearch && matchesPin;
           }),
         ])
-        .filter(([, defs]) => (defs as NodeDefinition[]).length > 0),
+        .filter(([, defs]) => (defs as NodeDefinition[]).length > 0)
     );
 
     const hasResults = Object.keys(filtered).length > 0;
@@ -106,7 +106,7 @@ export function ContextMenu({
     return (
       <div ref={ref} style={style} className="context-menu">
         <div className="context-menu__header">
-          {pinFilter ? `Подключить к ${pinFilter}` : "Добавить узел"}
+          {pinFilter ? `Подключить к ${pinFilter}` : 'Добавить узел'}
         </div>
         <input
           ref={searchRef}
@@ -153,7 +153,7 @@ export function ContextMenu({
                   </button>
                 ))}
               </div>
-            ),
+            )
           )
         ) : (
           <div className="context-menu__no-results">Нет результатов</div>
@@ -163,7 +163,7 @@ export function ContextMenu({
   }
 
   // ── Узел ──────────────────────────────────────────────────────────────────
-  if (menu.kind === "node") {
+  if (menu.kind === 'node') {
     return (
       <div ref={ref} style={style} className="context-menu">
         <button
@@ -187,8 +187,8 @@ export function ContextMenu({
         <div
           style={{
             height: 1,
-            background: "var(--ve-menu-border, #e4e4e7)",
-            margin: "4px 0",
+            background: 'var(--ve-menu-border, #e4e4e7)',
+            margin: '4px 0',
           }}
         />
         <button

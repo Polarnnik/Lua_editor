@@ -1,8 +1,8 @@
-import React from "react";
-import { NodeProps, useReactFlow } from "@xyflow/react";
-import { BaseNode } from "./BaseNode";
-import { NodeDefinition } from "../types";
-import { literal, unaryOp, binaryOp } from "../ast/builders";
+import React from 'react';
+import { NodeProps, useReactFlow } from '@xyflow/react';
+import { BaseNode } from './BaseNode';
+import { NodeDefinition } from '../types';
+import { literal, unaryOp, binaryOp } from '../ast/builders';
 
 interface BoolData {
   value: boolean;
@@ -17,12 +17,12 @@ function BoolNode({ id: nodeId, data, selected }: NodeProps) {
       title="Boolean"
       color="#dc2626"
       selected={selected}
-      outputs={[{ id: "value", label: "value", type: "boolean" }]}
+      outputs={[{ id: 'value', label: 'value', type: 'boolean' }]}
     >
       <select
         value={String(bd.value ?? true)}
         onChange={(e) =>
-          updateNodeData(nodeId, { value: e.target.value === "true" })
+          updateNodeData(nodeId, { value: e.target.value === 'true' })
         }
         className="nodrag w-full bg-zinc-50 text-zinc-900 text-xs px-2 py-1 rounded border border-zinc-300"
       >
@@ -34,11 +34,11 @@ function BoolNode({ id: nodeId, data, selected }: NodeProps) {
 }
 
 export const boolNodeDef: NodeDefinition<BoolData> = {
-  type: "value_boolean",
-  label: "Boolean",
-  category: "Значения",
-  color: "#dc2626",
-  outputs: [{ id: "value", label: "value", type: "boolean" }],
+  type: 'value_boolean',
+  label: 'Boolean',
+  category: 'Значения',
+  color: '#dc2626',
+  outputs: [{ id: 'value', label: 'value', type: 'boolean' }],
   defaultData: { value: true },
   component: BoolNode,
   codegen: {
@@ -52,28 +52,28 @@ function NotNode({ selected }: NodeProps) {
       title="NOT"
       color="#dc2626"
       selected={selected}
-      inputs={[{ id: "value", label: "value", type: "boolean" }]}
-      outputs={[{ id: "result", label: "result", type: "boolean" }]}
+      inputs={[{ id: 'value', label: 'value', type: 'boolean' }]}
+      outputs={[{ id: 'result', label: 'result', type: 'boolean' }]}
     />
   );
 }
 
 export const notNodeDef: NodeDefinition = {
-  type: "logic_not",
-  label: "NOT",
-  category: "Логика",
-  color: "#dc2626",
-  inputs: [{ id: "value", label: "value", type: "boolean" }],
-  outputs: [{ id: "result", label: "result", type: "boolean" }],
+  type: 'logic_not',
+  label: 'NOT',
+  category: 'Логика',
+  color: '#dc2626',
+  inputs: [{ id: 'value', label: 'value', type: 'boolean' }],
+  outputs: [{ id: 'result', label: 'result', type: 'boolean' }],
   component: NotNode,
   codegen: {
     evaluate: (_node, ctx) =>
-      unaryOp("not ", ctx.getInputDefault("value", literal(false))),
+      unaryOp('not ', ctx.getInputDefault('value', literal(false))),
   },
 };
 
 interface BoolOpData {
-  op: "and" | "or";
+  op: 'and' | 'or';
   [key: string]: unknown;
 }
 
@@ -82,17 +82,17 @@ function BoolOpNode({ id: nodeId, data, selected }: NodeProps) {
   const bd = data as BoolOpData;
   return (
     <BaseNode
-      title={bd.op === "and" ? "AND" : "OR"}
+      title={bd.op === 'and' ? 'AND' : 'OR'}
       color="#dc2626"
       selected={selected}
       inputs={[
-        { id: "a", label: "a", type: "boolean" },
-        { id: "b", label: "b", type: "boolean" },
+        { id: 'a', label: 'a', type: 'boolean' },
+        { id: 'b', label: 'b', type: 'boolean' },
       ]}
-      outputs={[{ id: "result", label: "result", type: "boolean" }]}
+      outputs={[{ id: 'result', label: 'result', type: 'boolean' }]}
     >
       <select
-        value={bd.op || "and"}
+        value={bd.op || 'and'}
         onChange={(e) => updateNodeData(nodeId, { op: e.target.value })}
         className="nodrag w-full bg-zinc-50 text-zinc-900 text-xs px-2 py-1 rounded border border-zinc-300"
       >
@@ -104,23 +104,23 @@ function BoolOpNode({ id: nodeId, data, selected }: NodeProps) {
 }
 
 export const boolOpNodeDef: NodeDefinition<BoolOpData> = {
-  type: "logic_boolop",
-  label: "AND / OR",
-  category: "Логика",
-  color: "#dc2626",
+  type: 'logic_boolop',
+  label: 'AND / OR',
+  category: 'Логика',
+  color: '#dc2626',
   inputs: [
-    { id: "a", label: "a", type: "boolean" },
-    { id: "b", label: "b", type: "boolean" },
+    { id: 'a', label: 'a', type: 'boolean' },
+    { id: 'b', label: 'b', type: 'boolean' },
   ],
-  outputs: [{ id: "result", label: "result", type: "boolean" }],
-  defaultData: { op: "and" },
+  outputs: [{ id: 'result', label: 'result', type: 'boolean' }],
+  defaultData: { op: 'and' },
   component: BoolOpNode,
   codegen: {
     evaluate: (node, ctx) =>
       binaryOp(
-        node.data.op || "and",
-        ctx.getInputDefault("a", literal(false)),
-        ctx.getInputDefault("b", literal(false)),
+        node.data.op || 'and',
+        ctx.getInputDefault('a', literal(false)),
+        ctx.getInputDefault('b', literal(false))
       ),
   },
 };

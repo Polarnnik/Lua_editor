@@ -25,19 +25,19 @@ const ThemeContext = createContext<EditorTheme>(defaultTheme);
 
 function toCSSVars(t: EditorTheme): React.CSSProperties {
   return {
-    '--ve-node-bg':         t.nodeBackground,
-    '--ve-node-text':       t.nodeTextColor,
-    '--ve-node-border':     t.nodeBorder,
+    '--ve-node-bg': t.nodeBackground,
+    '--ve-node-text': t.nodeTextColor,
+    '--ve-node-border': t.nodeBorder,
     '--ve-node-border-sel': t.nodeSelectedBorder,
-    '--ve-node-radius':     t.nodeBorderRadius,
-    '--ve-node-shadow':     t.nodeBoxShadow,
-    '--ve-pin-exec':        t.pinColors.exec,
-    '--ve-pin-number':      t.pinColors.number,
-    '--ve-pin-string':      t.pinColors.string,
-    '--ve-pin-boolean':     t.pinColors.boolean,
-    '--ve-pin-any':         t.pinColors.any,
-    '--ve-canvas-bg':       t.canvasBackground,
-    '--ve-canvas-grid':     t.canvasGrid,
+    '--ve-node-radius': t.nodeBorderRadius,
+    '--ve-node-shadow': t.nodeBoxShadow,
+    '--ve-pin-exec': t.pinColors.exec,
+    '--ve-pin-number': t.pinColors.number,
+    '--ve-pin-string': t.pinColors.string,
+    '--ve-pin-boolean': t.pinColors.boolean,
+    '--ve-pin-any': t.pinColors.any,
+    '--ve-canvas-bg': t.canvasBackground,
+    '--ve-canvas-grid': t.canvasGrid,
   } as React.CSSProperties;
 }
 

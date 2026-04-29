@@ -1,8 +1,8 @@
-import React from "react";
-import { NodeProps, useReactFlow } from "@xyflow/react";
-import { BaseNode } from "./BaseNode";
-import { NodeDefinition } from "../types";
-import { literal, unaryOp, binaryOp, call } from "../ast/builders";
+import React from 'react';
+import { NodeProps, useReactFlow } from '@xyflow/react';
+import { BaseNode } from './BaseNode';
+import { NodeDefinition } from '../types';
+import { literal, unaryOp, binaryOp, call } from '../ast/builders';
 
 function ConcatNode({ selected }: NodeProps) {
   return (
@@ -11,31 +11,31 @@ function ConcatNode({ selected }: NodeProps) {
       color="#db2777"
       selected={selected}
       inputs={[
-        { id: "a", label: "a", type: "string" },
-        { id: "b", label: "b", type: "string" },
+        { id: 'a', label: 'a', type: 'string' },
+        { id: 'b', label: 'b', type: 'string' },
       ]}
-      outputs={[{ id: "result", label: "result", type: "string" }]}
+      outputs={[{ id: 'result', label: 'result', type: 'string' }]}
     />
   );
 }
 
 export const concatNodeDef: NodeDefinition = {
-  type: "string_concat",
-  label: "Concat (..)",
-  category: "Строки",
-  color: "#db2777",
+  type: 'string_concat',
+  label: 'Concat (..)',
+  category: 'Строки',
+  color: '#db2777',
   inputs: [
-    { id: "a", label: "a", type: "string" },
-    { id: "b", label: "b", type: "string" },
+    { id: 'a', label: 'a', type: 'string' },
+    { id: 'b', label: 'b', type: 'string' },
   ],
-  outputs: [{ id: "result", label: "result", type: "string" }],
+  outputs: [{ id: 'result', label: 'result', type: 'string' }],
   component: ConcatNode,
   codegen: {
     evaluate: (_node, ctx) =>
       binaryOp(
-        "..",
-        ctx.getInputDefault("a", literal("")),
-        ctx.getInputDefault("b", literal("")),
+        '..',
+        ctx.getInputDefault('a', literal('')),
+        ctx.getInputDefault('b', literal(''))
       ),
   },
 };
@@ -46,46 +46,46 @@ function StrLenNode({ selected }: NodeProps) {
       title="Length (#)"
       color="#db2777"
       selected={selected}
-      inputs={[{ id: "str", label: "string", type: "string" }]}
-      outputs={[{ id: "result", label: "length", type: "number" }]}
+      inputs={[{ id: 'str', label: 'string', type: 'string' }]}
+      outputs={[{ id: 'result', label: 'length', type: 'number' }]}
     />
   );
 }
 
 export const strLenNodeDef: NodeDefinition = {
-  type: "string_len",
-  label: "Length (#)",
-  category: "Строки",
-  color: "#db2777",
-  inputs: [{ id: "str", label: "string", type: "string" }],
-  outputs: [{ id: "result", label: "length", type: "number" }],
+  type: 'string_len',
+  label: 'Length (#)',
+  category: 'Строки',
+  color: '#db2777',
+  inputs: [{ id: 'str', label: 'string', type: 'string' }],
+  outputs: [{ id: 'result', label: 'length', type: 'number' }],
   component: StrLenNode,
   codegen: {
     evaluate: (_node, ctx) =>
-      unaryOp("#", ctx.getInputDefault("str", literal(""))),
+      unaryOp('#', ctx.getInputDefault('str', literal(''))),
   },
 };
 
 interface ConvertData {
-  fn: "tostring" | "tonumber";
+  fn: 'tostring' | 'tonumber';
   [key: string]: unknown;
 }
 
 function ConvertNode({ id: nodeId, data, selected }: NodeProps) {
   const { updateNodeData } = useReactFlow();
   const cd = data as ConvertData;
-  const fn = cd.fn || "tostring";
+  const fn = cd.fn || 'tostring';
   return (
     <BaseNode
-      title={fn + "()"}
+      title={fn + '()'}
       color="#6366f1"
       selected={selected}
-      inputs={[{ id: "value", label: "value", type: "any" }]}
+      inputs={[{ id: 'value', label: 'value', type: 'any' }]}
       outputs={[
         {
-          id: "result",
-          label: "result",
-          type: fn === "tostring" ? "string" : "number",
+          id: 'result',
+          label: 'result',
+          type: fn === 'tostring' ? 'string' : 'number',
         },
       ]}
     >
@@ -102,18 +102,18 @@ function ConvertNode({ id: nodeId, data, selected }: NodeProps) {
 }
 
 export const convertNodeDef: NodeDefinition<ConvertData> = {
-  type: "util_convert",
-  label: "Конвертация типов",
-  category: "Утилиты",
-  color: "#6366f1",
-  inputs: [{ id: "value", label: "value", type: "any" }],
-  outputs: [{ id: "result", label: "result", type: "any" }],
-  defaultData: { fn: "tostring" },
+  type: 'util_convert',
+  label: 'Конвертация типов',
+  category: 'Утилиты',
+  color: '#6366f1',
+  inputs: [{ id: 'value', label: 'value', type: 'any' }],
+  outputs: [{ id: 'result', label: 'result', type: 'any' }],
+  defaultData: { fn: 'tostring' },
   component: ConvertNode,
   codegen: {
     evaluate: (node, ctx) => {
-      const fn = (node.data as ConvertData).fn ?? "tostring";
-      return call(fn, [ctx.getInputDefault("value", literal(null))]);
+      const fn = (node.data as ConvertData).fn ?? 'tostring';
+      return call(fn, [ctx.getInputDefault('value', literal(null))]);
     },
   },
 };

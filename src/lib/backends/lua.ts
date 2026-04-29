@@ -1,95 +1,95 @@
-import { CodeBackend, ErrorReporter } from "../types";
-import type { LuaProgram, LuaStatement, LuaExpression } from "../ast/types";
+import { CodeBackend, ErrorReporter } from '../types';
+import type { LuaProgram, LuaStatement, LuaExpression } from '../ast/types';
 
-const pad = (indent: number) => "  ".repeat(indent);
+const pad = (indent: number) => '  '.repeat(indent);
 
 function makePrinters(onError?: ErrorReporter) {
   function stmt(node: LuaStatement, indent = 0): string {
     switch (node.type) {
-      case "ExpressionStatement":
-        return pad(indent) + expr(node.expression) + "\n";
-      case "AssignmentExpression":
+      case 'ExpressionStatement':
+        return pad(indent) + expr(node.expression) + '\n';
+      case 'AssignmentExpression':
         return (
           pad(indent) +
-          node.left.map((l) => l.name).join(", ") +
-          " = " +
-          node.right.map(expr).join(", ") +
-          "\n"
+          node.left.map((l) => l.name).join(', ') +
+          ' = ' +
+          node.right.map(expr).join(', ') +
+          '\n'
         );
-      case "LocalDeclaration":
+      case 'LocalDeclaration':
         return (
           pad(indent) +
-          "local " +
-          node.names.join(", ") +
-          (node.values.length ? " = " + node.values.map(expr).join(", ") : "") +
-          "\n"
+          'local ' +
+          node.names.join(', ') +
+          (node.values.length ? ' = ' + node.values.map(expr).join(', ') : '') +
+          '\n'
         );
-      case "IfStatement":
+      case 'IfStatement':
         return (
           pad(indent) +
-          "if " +
+          'if ' +
           expr(node.condition) +
-          " then\n" +
-          node.consequent.map((s) => stmt(s, indent + 1)).join("") +
+          ' then\n' +
+          node.consequent.map((s) => stmt(s, indent + 1)).join('') +
           (node.alternate.length
             ? pad(indent) +
-              "else\n" +
-              node.alternate.map((s) => stmt(s, indent + 1)).join("")
-            : "") +
+              'else\n' +
+              node.alternate.map((s) => stmt(s, indent + 1)).join('')
+            : '') +
           pad(indent) +
-          "end\n"
+          'end\n'
         );
-      case "FunctionDeclaration":
+      case 'FunctionDeclaration':
         return (
           pad(indent) +
-          "function " +
+          'function ' +
           node.name +
-          "(" +
-          node.params.join(", ") +
-          ")\n" +
-          node.body.map((s) => stmt(s, indent + 1)).join("") +
+          '(' +
+          node.params.join(', ') +
+          ')\n' +
+          node.body.map((s) => stmt(s, indent + 1)).join('') +
           pad(indent) +
-          "end\n"
+          'end\n'
         );
-      case "WhileStatement":
+      case 'WhileStatement':
         return (
           pad(indent) +
-          "while " +
+          'while ' +
           expr(node.condition) +
-          " do\n" +
-          node.body.map((s) => stmt(s, indent + 1)).join("") +
+          ' do\n' +
+          node.body.map((s) => stmt(s, indent + 1)).join('') +
           pad(indent) +
-          "end\n"
+          'end\n'
         );
-      case "ForStatement":
+      case 'ForStatement':
         return (
           pad(indent) +
-          "for " +
+          'for ' +
           node.variable +
-          " = " +
+          ' = ' +
           expr(node.start) +
-          ", " +
+          ', ' +
           expr(node.end) +
-          (node.step ? ", " + expr(node.step) : "") +
-          " do\n" +
-          node.body.map((s) => stmt(s, indent + 1)).join("") +
+          (node.step ? ', ' + expr(node.step) : '') +
+          ' do\n' +
+          node.body.map((s) => stmt(s, indent + 1)).join('') +
           pad(indent) +
-          "end\n"
+          'end\n'
         );
-      case "ReturnStatement":
+      case 'ReturnStatement':
         return (
           pad(indent) +
-          "return" +
-          (node.argument ? " " + expr(node.argument) : "") +
-          "\n"
+          'return' +
+          (node.argument ? ' ' + expr(node.argument) : '') +
+          '\n'
         );
-      case "BreakStatement":
-        return pad(indent) + "break\n";
+      case 'BreakStatement':
+        return pad(indent) + 'break\n';
       default: {
         const _exhaustive: never = node;
         const variant = (_exhaustive as { type: string }).type;
         onError?.({
-          kind: "unsupported_ast_variant",
+          kind: 'unsupported_ast_variant',
           message: `Lua backend: неподдерживаемый тип инструкции AST "${variant}".`,
         });
         return pad(indent) + `-- unsupported: ${variant}\n`;
@@ -99,47 +99,45 @@ function makePrinters(onError?: ErrorReporter) {
 
   function expr(node: LuaExpression): string {
     switch (node.type) {
-      case "Identifier":
+      case 'Identifier':
         return node.name;
-      case "Literal":
+      case 'Literal':
         return node.raw;
-      case "BinaryExpression":
+      case 'BinaryExpression':
         return (
-          "(" +
+          '(' +
           expr(node.left) +
-          " " +
+          ' ' +
           node.operator +
-          " " +
+          ' ' +
           expr(node.right) +
-          ")"
+          ')'
         );
-      case "UnaryExpression":
+      case 'UnaryExpression':
         return node.operator + expr(node.argument);
-      case "CallExpression":
+      case 'CallExpression':
         return (
-          expr(node.callee) + "(" + node.arguments.map(expr).join(", ") + ")"
+          expr(node.callee) + '(' + node.arguments.map(expr).join(', ') + ')'
         );
-      case "IndexExpression":
-        return expr(node.object) + "[" + expr(node.index) + "]";
-      case "MemberExpression":
-        return expr(node.object) + "." + node.property;
-      case "TableExpression":
+      case 'IndexExpression':
+        return expr(node.object) + '[' + expr(node.index) + ']';
+      case 'MemberExpression':
+        return expr(node.object) + '.' + node.property;
+      case 'TableExpression':
         return (
-          "{" +
+          '{' +
           node.fields
             .map((f) =>
-              f.key
-                ? "[" + expr(f.key) + "] = " + expr(f.value)
-                : expr(f.value),
+              f.key ? '[' + expr(f.key) + '] = ' + expr(f.value) : expr(f.value)
             )
-            .join(", ") +
-          "}"
+            .join(', ') +
+          '}'
         );
       default: {
         const _exhaustive: never = node;
         const variant = (_exhaustive as { type: string }).type;
         onError?.({
-          kind: "unsupported_ast_variant",
+          kind: 'unsupported_ast_variant',
           message: `Lua backend: неподдерживаемый тип выражения AST "${variant}".`,
         });
         return `--[[unsupported: ${variant}]]`;
@@ -151,10 +149,10 @@ function makePrinters(onError?: ErrorReporter) {
 }
 
 export const luaBackend: CodeBackend = {
-  language: "lua",
+  language: 'lua',
   emit(ast, onError) {
     const program = ast as LuaProgram;
     const { stmt } = makePrinters(onError);
-    return program.body.map((s) => stmt(s as LuaStatement)).join("\n") + "\n";
+    return program.body.map((s) => stmt(s as LuaStatement)).join('\n') + '\n';
   },
 };

@@ -1,8 +1,8 @@
-import React from "react";
-import { NodeProps, useReactFlow } from "@xyflow/react";
-import { BaseNode } from "./BaseNode";
-import { NodeDefinition } from "../types";
-import { binaryOp, literal } from "../ast/builders";
+import React from 'react';
+import { NodeProps, useReactFlow } from '@xyflow/react';
+import { BaseNode } from './BaseNode';
+import { NodeDefinition } from '../types';
+import { binaryOp, literal } from '../ast/builders';
 
 interface MathData {
   operator: string;
@@ -16,17 +16,17 @@ export function MathNode({ id, data, selected }: NodeProps) {
 
   return (
     <BaseNode
-      title={md.label || "Математика"}
+      title={md.label || 'Математика'}
       color="#16a34a"
       selected={selected}
       inputs={[
-        { id: "a", label: "A", type: "number" },
-        { id: "b", label: "B", type: "number" },
+        { id: 'a', label: 'A', type: 'number' },
+        { id: 'b', label: 'B', type: 'number' },
       ]}
-      outputs={[{ id: "result", label: "Результат", type: "number" }]}
+      outputs={[{ id: 'result', label: 'Результат', type: 'number' }]}
     >
       <select
-        value={md.operator || "+"}
+        value={md.operator || '+'}
         onChange={(e) => updateNodeData(id, { operator: e.target.value })}
         className="nodrag w-full bg-zinc-50 text-zinc-900 text-xs px-2 py-1 rounded border border-zinc-300 focus:outline-none focus:border-blue-500"
       >
@@ -40,23 +40,23 @@ export function MathNode({ id, data, selected }: NodeProps) {
 }
 
 export const mathNodeDef: NodeDefinition<MathData> = {
-  type: "logic_math",
-  label: "Математика",
-  category: "Математика",
-  color: "#16a34a",
+  type: 'logic_math',
+  label: 'Математика',
+  category: 'Математика',
+  color: '#16a34a',
   inputs: [
-    { id: "a", label: "A", type: "number" },
-    { id: "b", label: "B", type: "number" },
+    { id: 'a', label: 'A', type: 'number' },
+    { id: 'b', label: 'B', type: 'number' },
   ],
-  outputs: [{ id: "result", label: "Результат", type: "number" }],
-  defaultData: { operator: "+" },
+  outputs: [{ id: 'result', label: 'Результат', type: 'number' }],
+  defaultData: { operator: '+' },
   component: MathNode,
   codegen: {
     evaluate: (node, ctx) =>
       binaryOp(
-        node.data.operator || "+",
-        ctx.getInputDefault("a", literal(0)),
-        ctx.getInputDefault("b", literal(0)),
+        node.data.operator || '+',
+        ctx.getInputDefault('a', literal(0)),
+        ctx.getInputDefault('b', literal(0))
       ),
   },
 };
