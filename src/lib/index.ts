@@ -12,6 +12,9 @@ export type {
   TraverseFn,
   CodeBackend,
   EditorTheme,
+  EditorError,
+  EditorErrorKind,
+  ErrorReporter,
 } from "./types";
 export { defaultTheme, PIN_COLORS } from "./types";
 

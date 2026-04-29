@@ -30,6 +30,7 @@ import {
   EditorTheme,
   defaultTheme,
   PinType,
+  EditorError,
 } from "./types";
 import { NodeRegistry } from "./nodeRegistry";
 import { CodeGenerator } from "./generators/CodeGenerator";
@@ -37,12 +38,21 @@ import { luaBackend } from "./backends/lua";
 import { ContextMenu, ContextMenuState } from "./components/ContextMenu";
 import { ConnectionValidator } from "./core/ConnectionValidator";
 import { ThemeProvider } from "./core/ThemeContext";
-import { GraphStore } from "./core/GraphStore";
+import {
+  GraphStore,
+  toGraphSnapshot,
+  fromGraphSnapshot,
+  GraphSnapshot,
+} from "./core/GraphStore";
+
+// Одни и те же пустые массивы для всех рендеров, чтобы не было бесконечного цикла.
+const EMPTY_NODES: Node[] = [];
+const EMPTY_EDGES: Edge[] = [];
 
 export interface VisualEditorHandle {
   generate(): string;
-  getGraph(): { nodes: Node[]; edges: Edge[] };
-  loadGraph(snap: { nodes: Node[]; edges: Edge[] }): void;
+  getGraph(): GraphSnapshot;
+  loadGraph(snap: GraphSnapshot): void;
   undo(): void;
   redo(): void;
   canUndo(): boolean;
@@ -55,6 +65,8 @@ export interface VisualEditorProps {
   theme?: Partial<EditorTheme>;
   initialNodes?: Node[];
   initialEdges?: Edge[];
+  onChange?: (graph: GraphSnapshot) => void;
+  onError?: (err: EditorError) => void;
 }
 
 interface InnerProps extends VisualEditorProps {
@@ -65,10 +77,15 @@ function VisualEditorInner({
   nodes: nodeDefs,
   backend = luaBackend,
   theme: themeProp,
-  initialNodes: initNodes = [],
-  initialEdges: initEdges = [],
+  initialNodes,
+  initialEdges,
   editorRef,
+  onChange,
+  onError,
 }: InnerProps) {
+  const initNodes = initialNodes ?? EMPTY_NODES;
+  const initEdges = initialEdges ?? EMPTY_EDGES;
+
   const theme: EditorTheme = {
     ...defaultTheme,
     ...themeProp,
@@ -124,16 +141,36 @@ function VisualEditorInner({
       (snap) => {
         setNodes(snap.nodes);
         setEdges(snap.edges);
+        onChange?.(toGraphSnapshot(snap));
       },
     );
   }
+
+  const initialRef = useRef({ initNodes, initEdges });
+  useEffect(() => {
+    const prev = initialRef.current;
+    if (prev.initNodes === initNodes && prev.initEdges === initEdges) return;
+    initialRef.current = { initNodes, initEdges };
+    const seeds =
+      initNodes.length > 0
+        ? initNodes
+        : [
+            {
+              id: "event_start-init",
+              type: "event_start",
+              position: { x: 160, y: 160 },
+              data: { label: "Старт события" },
+            } as Node,
+          ];
+    store.current!.load({ nodes: seeds, edges: initEdges });
+  }, [initNodes, initEdges]);
 
   const pushSnapshot = useCallback((nextNodes: Node[], nextEdges: Edge[]) => {
     store.current!.push({ nodes: nextNodes, edges: nextEdges });
   }, []);
 
-  useEffect(() => {
-    const handle = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
       const ctrl = e.ctrlKey || e.metaKey;
       if (!ctrl) return;
 
@@ -179,7 +216,8 @@ function VisualEditorInner({
         if (!clipboard.current.length) return;
         const currentNodes = nodesRef.current;
         const currentEdges = edgesRef.current;
-        const pasted = clipboard.current.map((n) => ({
+        const clipNodes = clipboard.current;
+        const pasted = clipNodes.map((n) => ({
           ...n,
           id: `${n.type}-${nanoid(6)}`,
           position: { x: n.position.x + 40, y: n.position.y + 40 },
@@ -191,25 +229,36 @@ function VisualEditorInner({
         setNodes(next);
         pushSnapshot(next, currentEdges);
       }
-    };
-    window.addEventListener("keydown", handle);
-    return () => window.removeEventListener("keydown", handle);
-  }, []);
+    },
+    [pushSnapshot, setNodes],
+  );
 
   useImperativeHandle(
     editorRef,
     () => ({
       generate() {
-        return new CodeGenerator(registry, backend).generate(
-          nodesRef.current,
-          edgesRef.current,
-        );
+        try {
+          return new CodeGenerator(registry, backend, onError).generate(
+            nodesRef.current,
+            edgesRef.current,
+          );
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          onError?.({
+            kind: "unsupported_ast_variant",
+            message: `Непредвиденная ошибка генерации кода: ${message}`,
+          });
+          return "";
+        }
       },
       getGraph() {
-        return { nodes: nodesRef.current, edges: edgesRef.current };
+        return toGraphSnapshot({
+          nodes: nodesRef.current,
+          edges: edgesRef.current,
+        });
       },
-      loadGraph(snap) {
-        store.current!.load(snap);
+      loadGraph(snap: GraphSnapshot) {
+        store.current!.load(fromGraphSnapshot(snap));
       },
       undo() {
         store.current!.undo();
@@ -224,7 +273,7 @@ function VisualEditorInner({
         return store.current!.canRedo();
       },
     }),
-    [registry, backend],
+    [registry, backend, onError],
   );
 
   const isValidConnection = useCallback(
@@ -356,10 +405,12 @@ function VisualEditorInner({
   const handlePaste = useCallback(
     (position: { x: number; y: number }) => {
       if (!clipboard.current.length) return;
-      const nodes = clipboard.current;
-      const cx = nodes.reduce((s, n) => s + n.position.x, 0) / nodes.length;
-      const cy = nodes.reduce((s, n) => s + n.position.y, 0) / nodes.length;
-      const pasted = nodes.map((n) => ({
+      const clipNodes = clipboard.current;
+      const cx =
+        clipNodes.reduce((s, n) => s + n.position.x, 0) / clipNodes.length;
+      const cy =
+        clipNodes.reduce((s, n) => s + n.position.y, 0) / clipNodes.length;
+      const pasted = clipNodes.map((n) => ({
         ...n,
         id: `${n.type}-${nanoid(6)}`,
         position: {
@@ -436,7 +487,12 @@ function VisualEditorInner({
 
   return (
     <ThemeProvider theme={theme}>
-      <div className="relative h-full w-full">
+      <div
+        className="relative h-full w-full"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        style={{ outline: "none" }}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
