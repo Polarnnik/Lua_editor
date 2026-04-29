@@ -1,16 +1,16 @@
-import { Node, Edge } from '@xyflow/react';
-import { Expr, Stmt } from './types';
-import { GeneratorContext, NodeCodegen } from '../types';
-import { NodeRegistry } from '../nodeRegistry';
-
-// ASTTraverser больше не принимает отдельный generators map.
-// Он получает NodeRegistry и достаёт codegen прямо из NodeDefinition.
+import { Node, Edge } from "@xyflow/react";
+import { Expr, Stmt } from "./types";
+import { GeneratorContext, NodeCodegen } from "../types";
+import { NodeRegistry } from "../nodeRegistry";
 
 export class ASTTraverser {
   private nodes: Node[];
   private edges: Edge[];
   private registry: NodeRegistry;
+
   private evaluatedNodes: Map<string, Expr> = new Map();
+
+  private evaluating: Set<string> = new Set();
 
   constructor(nodes: Node[], edges: Edge[], registry: NodeRegistry) {
     this.nodes = nodes;
@@ -34,16 +34,20 @@ export class ASTTraverser {
     return statements;
   }
 
+  executeEntry(node: Node): Stmt[] {
+    return this.executeNode(node);
+  }
+
   private executeNode(node: Node): Stmt[] {
-    const def = this.registry.get(node.type!);
+    const def = this.registry.get(node.type ?? "");
     if (!def) return [];
 
     const codegen = def.codegen as NodeCodegen;
-    if (!('execute' in codegen)) return [];
+    if (!("execute" in codegen)) return [];
 
     const ctx = this.createContext(node);
     return codegen.execute(
-      node as any,
+      node as Parameters<typeof codegen.execute>[0],
       ctx,
       (handle) => this.traverse(node.id, handle),
     );
@@ -53,23 +57,39 @@ export class ASTTraverser {
     const cached = this.evaluatedNodes.get(node.id);
     if (cached) return cached;
 
-    const def = this.registry.get(node.type!);
-    if (!def) return { type: 'Literal', value: null, raw: 'nil' };
+    if (this.evaluating.has(node.id)) {
+      console.warn(
+        `[ASTTraverser] Cycle detected at node "${node.id}" (type: ${node.type}). Returning nil.`,
+      );
+      return { type: "Literal", value: null, raw: "nil" };
+    }
+
+    const def = this.registry.get(node.type ?? "");
+    if (!def) return { type: "Literal", value: null, raw: "nil" };
 
     const codegen = def.codegen as NodeCodegen;
-    if (!('evaluate' in codegen)) return { type: 'Literal', value: null, raw: 'nil' };
+    if (!("evaluate" in codegen))
+      return { type: "Literal", value: null, raw: "nil" };
 
-    const ctx = this.createContext(node);
-    const result = codegen.evaluate(node as any, ctx);
-    this.evaluatedNodes.set(node.id, result);
-    return result;
+    this.evaluating.add(node.id);
+    try {
+      const ctx = this.createContext(node);
+      const result = codegen.evaluate(
+        node as Parameters<typeof codegen.evaluate>[0],
+        ctx,
+      );
+      this.evaluatedNodes.set(node.id, result);
+      return result;
+    } finally {
+      this.evaluating.delete(node.id);
+    }
   }
 
   private createContext(node: Node): GeneratorContext {
     return {
       getInput: (handleId: string): Expr => {
         const sourceNode = this.resolveSourceNode(node.id, handleId);
-        if (!sourceNode) return { type: 'Literal', value: null, raw: 'nil' };
+        if (!sourceNode) return { type: "Literal", value: null, raw: "nil" };
         return this.evaluateExpression(sourceNode);
       },
       getInputDefault: (handleId: string, fallback: Expr): Expr => {
@@ -80,11 +100,14 @@ export class ASTTraverser {
     };
   }
 
-  private resolveSourceNode(targetNodeId: string, targetHandleId: string): Node | null {
+  private resolveSourceNode(
+    targetNodeId: string,
+    targetHandleId: string,
+  ): Node | null {
     const edge = this.edges.find(
       (e) => e.target === targetNodeId && e.targetHandle === targetHandleId,
     );
     if (!edge) return null;
-    return this.nodes.find((n) => n.id === edge.source) || null;
+    return this.nodes.find((n) => n.id === edge.source) ?? null;
   }
 }
