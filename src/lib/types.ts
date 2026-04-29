@@ -34,30 +34,30 @@ export interface EditorTheme {
 
 export const defaultTheme: EditorTheme = {
   pinColors: {
-    exec:    "#000000",
-    string:  "#ec4899",
-    number:  "#22c55e",
+    exec: "#000000",
+    string: "#ec4899",
+    number: "#22c55e",
     boolean: "#ef4444",
-    any:     "#9ca3af",
+    any: "#9ca3af",
   },
-  nodeBackground:     "#ffffff",
-  nodeTextColor:      "#3f3f46",
-  nodeBorder:         "#d4d4d8",
+  nodeBackground: "#ffffff",
+  nodeTextColor: "#3f3f46",
+  nodeBorder: "#d4d4d8",
   nodeSelectedBorder: "#eab308",
-  nodeBorderRadius:   "12px",
-  nodeBoxShadow:      "0 4px 16px rgba(0,0,0,0.10)",
-  canvasBackground:   "#fafafa",
-  canvasGrid:         "#e4e4e7",
-  menuBackground:     "#ffffff",
-  menuBorder:         "#e4e4e7",
-  menuText:           "#18181b",
-  menuTextMuted:      "#71717a",
-  menuItemHover:      "#f4f4f5",
-  menuAccent:         "#3b82f6",
-  menuDanger:         "#dc2626",
-  menuDangerHover:    "#fef2f2",
-  menuRadius:         "8px",
-  menuBoxShadow:      "0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)",
+  nodeBorderRadius: "12px",
+  nodeBoxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+  canvasBackground: "#fafafa",
+  canvasGrid: "#e4e4e7",
+  menuBackground: "#ffffff",
+  menuBorder: "#e4e4e7",
+  menuText: "#18181b",
+  menuTextMuted: "#71717a",
+  menuItemHover: "#f4f4f5",
+  menuAccent: "#3b82f6",
+  menuDanger: "#dc2626",
+  menuDangerHover: "#fef2f2",
+  menuRadius: "8px",
+  menuBoxShadow: "0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)",
 };
 
 export const PIN_COLORS: Record<PinType, string> = defaultTheme.pinColors;
@@ -74,6 +74,14 @@ export interface GeneratorContext {
 
 export type NodeCodegenEvaluate<TData = Record<string, unknown>> = {
   evaluate: (node: { id: string; data: TData }, ctx: GeneratorContext) => Expr;
+};
+
+export type NodeCodegenExecute<TData = Record<string, unknown>> = {
+  execute: (
+    node: { id: string; data: TData },
+    ctx: GeneratorContext,
+    traverse: (handle: string) => import("./ast/types").Stmt[],
+  ) => import("./ast/types").Stmt[];
 };
 
 export type NodeCodegen<TData = Record<string, unknown>> =
