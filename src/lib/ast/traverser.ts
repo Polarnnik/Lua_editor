@@ -1,21 +1,28 @@
 import { Node, Edge } from "@xyflow/react";
 import { Expr, Stmt } from "./types";
-import { GeneratorContext, NodeCodegen } from "../types";
+import { GeneratorContext, NodeCodegen, ErrorReporter } from "../types";
 import { NodeRegistry } from "../nodeRegistry";
 
 export class ASTTraverser {
   private nodes: Node[];
   private edges: Edge[];
   private registry: NodeRegistry;
+  private onError?: ErrorReporter;
 
   private evaluatedNodes: Map<string, Expr> = new Map();
 
   private evaluating: Set<string> = new Set();
 
-  constructor(nodes: Node[], edges: Edge[], registry: NodeRegistry) {
+  constructor(
+    nodes: Node[],
+    edges: Edge[],
+    registry: NodeRegistry,
+    onError?: ErrorReporter,
+  ) {
     this.nodes = nodes;
     this.edges = edges;
     this.registry = registry;
+    this.onError = onError;
   }
 
   traverse(fromNodeId: string, sourceHandle: string): Stmt[] {
@@ -40,10 +47,24 @@ export class ASTTraverser {
 
   private executeNode(node: Node): Stmt[] {
     const def = this.registry.get(node.type ?? "");
-    if (!def) return [];
+    if (!def) {
+      this.onError?.({
+        kind: "unknown_node_type",
+        message: `Узел "${node.id}" имеет неизвестный тип "${node.type ?? "<undefined>"}" — пропущен.`,
+        nodeId: node.id,
+      });
+      return [];
+    }
 
     const codegen = def.codegen as NodeCodegen;
-    if (!("execute" in codegen)) return [];
+    if (!("execute" in codegen)) {
+      this.onError?.({
+        kind: "no_codegen",
+        message: `Узел "${node.id}" (${node.type}) находится в потоке выполнения, но определяет только evaluate, не execute — пропущен.`,
+        nodeId: node.id,
+      });
+      return [];
+    }
 
     const ctx = this.createContext(node);
     return codegen.execute(
@@ -58,18 +79,33 @@ export class ASTTraverser {
     if (cached) return cached;
 
     if (this.evaluating.has(node.id)) {
-      console.warn(
-        `[ASTTraverser] Cycle detected at node "${node.id}" (type: ${node.type}). Returning nil.`,
-      );
+      this.onError?.({
+        kind: "cycle",
+        message: `Обнаружен цикл в выражении на узле "${node.id}" (${node.type}). Возвращено nil.`,
+        nodeId: node.id,
+      });
       return { type: "Literal", value: null, raw: "nil" };
     }
 
     const def = this.registry.get(node.type ?? "");
-    if (!def) return { type: "Literal", value: null, raw: "nil" };
+    if (!def) {
+      this.onError?.({
+        kind: "unknown_node_type",
+        message: `Узел "${node.id}" имеет неизвестный тип "${node.type ?? "<undefined>"}" — возвращено nil.`,
+        nodeId: node.id,
+      });
+      return { type: "Literal", value: null, raw: "nil" };
+    }
 
     const codegen = def.codegen as NodeCodegen;
-    if (!("evaluate" in codegen))
+    if (!("evaluate" in codegen)) {
+      this.onError?.({
+        kind: "no_codegen",
+        message: `Узел "${node.id}" (${node.type}) используется как выражение, но определяет только execute, не evaluate — возвращено nil.`,
+        nodeId: node.id,
+      });
       return { type: "Literal", value: null, raw: "nil" };
+    }
 
     this.evaluating.add(node.id);
     try {
