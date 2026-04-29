@@ -10,7 +10,7 @@ export class NodeRegistry {
     for (const def of defs) {
       if (this.nodes.has(def.type)) {
         console.warn(
-          `[NodeRegistry] Дублирующийся тип узла: "${def.type}". Перезаписывается.`,
+          `[NodeRegistry] Duplicate node type: "${def.type}". Overwriting.`,
         );
       }
       this.nodes.set(def.type, def);
@@ -23,6 +23,10 @@ export class NodeRegistry {
 
   getAll(): NodeDefinition[] {
     return Array.from(this.nodes.values());
+  }
+
+  getEntryNodes(): NodeDefinition[] {
+    return Array.from(this.nodes.values()).filter((d) => d.isEntry);
   }
 
   getReactFlowTypes(): Record<string, React.ComponentType<NodeProps>> {
