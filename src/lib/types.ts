@@ -95,9 +95,28 @@ export interface PinDef {
   multi?: boolean;
 }
 
+// Error reporting
+
+export type EditorErrorKind =
+  | "unknown_node_type"
+  | "no_codegen"
+  | "cycle"
+  | "unsupported_ast_variant";
+
+export interface EditorError {
+  kind: EditorErrorKind;
+  message: string;
+  nodeId?: string;
+}
+
+export type ErrorReporter = (err: EditorError) => void;
+
 export interface CodeBackend {
   language: string;
-  emit(ast: { type: "Program"; body: unknown[] }): string;
+  emit(
+    ast: { type: "Program"; body: unknown[] },
+    onError?: ErrorReporter,
+  ): string;
 }
 
 export interface NodeDefinition<TData = Record<string, unknown>> {
