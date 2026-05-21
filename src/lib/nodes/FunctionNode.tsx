@@ -2,7 +2,14 @@ import React from 'react';
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import { NodeDefinition } from '../types';
-import { funcDecl, call, exprStmt, id, literal } from '../ast/builders';
+import {
+  funcDecl,
+  call,
+  exprStmt,
+  id,
+  literal,
+  sanitizeLuaIdentifier,
+} from '../ast/builders';
 
 interface FunctionDeclData {
   name: string;
@@ -52,11 +59,12 @@ export const functionDeclDef: NodeDefinition<FunctionDeclData> = {
   component: FunctionDeclNode,
   codegen: {
     execute: (node, _ctx, traverse) => {
-      const name = node.data.name || 'myFunction';
+      const name = sanitizeLuaIdentifier(node.data.name || 'myFunction');
       const params = (node.data.params || '')
         .split(',')
         .map((p: string) => p.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .map(sanitizeLuaIdentifier);
       return [funcDecl(name, params, traverse('exec_out'))];
     },
   },
@@ -75,7 +83,7 @@ function CallFunctionNode({ id: nodeId, data, selected }: NodeProps) {
 
   const argPins = Array.from({ length: argCount }, (_, i) => ({
     id: `arg_${i}`,
-    label: `arg ${i}`,
+    label: `Аргумент ${i}`,
     type: 'any' as const,
   }));
 
@@ -84,8 +92,11 @@ function CallFunctionNode({ id: nodeId, data, selected }: NodeProps) {
       title="Вызвать функцию"
       color="#7c3aed"
       selected={selected}
-      inputs={[{ id: 'exec_in', label: 'exec', type: 'exec' }, ...argPins]}
-      outputs={[{ id: 'exec_out', label: 'exec', type: 'exec' }]}
+      inputs={[
+        { id: 'exec_in', label: 'Выполнение', type: 'exec' },
+        ...argPins,
+      ]}
+      outputs={[{ id: 'exec_out', label: 'Выполнение', type: 'exec' }]}
     >
       <input
         value={cd.name || 'myFunction'}
@@ -116,21 +127,21 @@ export const callFunctionDef: NodeDefinition<CallFunctionData> = {
   category: 'Функции',
   color: '#7c3aed',
   inputs: [
-    { id: 'exec_in', label: 'exec', type: 'exec' },
-    { id: 'arg_0', label: 'arg 0', type: 'any' },
+    { id: 'exec_in', label: 'Выполнение', type: 'exec' },
+    { id: 'arg_0', label: 'Аргумент 0', type: 'any' },
   ],
-  outputs: [{ id: 'exec_out', label: 'exec', type: 'exec' }],
+  outputs: [{ id: 'exec_out', label: 'Выполнение', type: 'exec' }],
   defaultData: { name: 'myFunction', argCount: 1 },
   component: CallFunctionNode,
   codegen: {
     execute: (node, ctx, traverse) => {
-      const name = node.data.name || 'myFunction';
+      const name = sanitizeLuaIdentifier(node.data.name || 'myFunction');
       const argCount = Math.max(
         0,
-        Math.min(4, Number(node.data.argCount ?? 1))
+        Math.min(4, Number(node.data.argCount ?? 1)),
       );
       const args = Array.from({ length: argCount }, (_, i) =>
-        ctx.getInputDefault(`arg_${i}`, literal(null))
+        ctx.getInputDefault(`arg_${i}`, literal(null)),
       );
       return [exprStmt(call(name, args)), ...traverse('exec_out')];
     },
@@ -150,7 +161,7 @@ function GetParamNode({ id: nodeId, data, selected }: NodeProps) {
       title="Параметр функции"
       color="#7c3aed"
       selected={selected}
-      outputs={[{ id: 'value', label: 'value', type: 'any' }]}
+      outputs={[{ id: 'value', label: 'Значение', type: 'any' }]}
     >
       <input
         value={gd.name || 'a'}
@@ -167,10 +178,10 @@ export const getParamDef: NodeDefinition<GetParamData> = {
   label: 'Параметр функции',
   category: 'Функции',
   color: '#7c3aed',
-  outputs: [{ id: 'value', label: 'value', type: 'any' }],
+  outputs: [{ id: 'value', label: 'Значение', type: 'any' }],
   defaultData: { name: 'a' },
   component: GetParamNode,
   codegen: {
-    evaluate: (node) => id(node.data.name || 'a'),
+    evaluate: (node) => id(sanitizeLuaIdentifier(node.data.name || 'a')),
   },
 };
