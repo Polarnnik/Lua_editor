@@ -19,7 +19,7 @@ function TrigNode({ id, data, selected }: NodeProps) {
       color="#0891b2"
       selected={selected}
       inputs={[{ id: 'x', label: 'x', type: 'number' }]}
-      outputs={[{ id: 'result', label: 'result', type: 'number' }]}
+      outputs={[{ id: 'result', label: 'Результат', type: 'number' }]}
     >
       <select
         value={td.fn || 'sin'}
@@ -56,8 +56,8 @@ export const trigNodeDef: NodeDefinition<TrigData> = {
   label: 'Тригонометрия',
   category: 'Математика',
   color: '#0891b2',
-  inputs: [{ id: 'x', label: 'x', type: 'number' }],
-  outputs: [{ id: 'result', label: 'result', type: 'number' }],
+  inputs: [{ id: 'x', label: 'X', type: 'number' }],
+  outputs: [{ id: 'result', label: 'Результат', type: 'number' }],
   defaultData: { fn: 'sin', label: 'sin(x)' },
   component: TrigNode,
   codegen: {
@@ -84,12 +84,12 @@ function PowerNode({ id, data, selected }: NodeProps) {
       inputs={
         mode === 'pow'
           ? [
-              { id: 'base', label: 'base', type: 'number' },
-              { id: 'exp', label: 'exp', type: 'number' },
+              { id: 'base', label: 'Основание', type: 'number' },
+              { id: 'exp', label: 'Степень', type: 'number' },
             ]
-          : [{ id: 'x', label: 'x', type: 'number' }]
+          : [{ id: 'x', label: 'X', type: 'number' }]
       }
-      outputs={[{ id: 'result', label: 'result', type: 'number' }]}
+      outputs={[{ id: 'result', label: 'Результат', type: 'number' }]}
     >
       <select
         value={mode}
@@ -120,10 +120,10 @@ export const powerNodeDef: NodeDefinition<PowerData> = {
   category: 'Математика',
   color: '#0891b2',
   inputs: [
-    { id: 'base', label: 'base', type: 'number' },
-    { id: 'exp', label: 'exp', type: 'number' },
+    { id: 'base', label: 'Основание', type: 'number' },
+    { id: 'exp', label: 'Степень', type: 'number' },
   ],
-  outputs: [{ id: 'result', label: 'result', type: 'number' }],
+  outputs: [{ id: 'result', label: 'Результат', type: 'number' }],
   defaultData: { mode: 'pow', label: 'base ^ exp' },
   component: PowerNode,
   codegen: {
@@ -133,7 +133,7 @@ export const powerNodeDef: NodeDefinition<PowerData> = {
         return binaryOp(
           '^',
           ctx.getInputDefault('base', literal(0)),
-          ctx.getInputDefault('exp', literal(2))
+          ctx.getInputDefault('exp', literal(2)),
         );
       }
       return mathCall(mode, [ctx.getInputDefault('x', literal(0))]);
@@ -175,7 +175,7 @@ function BitNode({ id, data, selected }: NodeProps) {
             ]
           : [{ id: 'a', label: 'a', type: 'number' }]
       }
-      outputs={[{ id: 'result', label: 'result', type: 'number' }]}
+      outputs={[{ id: 'result', label: 'Результат', type: 'number' }]}
     >
       <select
         value={op}
@@ -184,12 +184,12 @@ function BitNode({ id, data, selected }: NodeProps) {
         }
         className="nodrag w-full bg-zinc-50 text-zinc-900 text-xs px-2 py-1 rounded border border-zinc-300"
       >
-        <option value="band">AND (&amp;)</option>
-        <option value="bor">OR (|)</option>
-        <option value="bxor">XOR (~)</option>
-        <option value="lshift">LSHIFT (&lt;&lt;)</option>
-        <option value="rshift">RSHIFT (&gt;&gt;)</option>
-        <option value="bnot">NOT (~a)</option>
+        <option value="band">И (&amp;)</option>
+        <option value="bor">ИЛИ (|)</option>
+        <option value="bxor">Исключающее ИЛИ (~)</option>
+        <option value="lshift">Сдвиг влево (&lt;&lt;)</option>
+        <option value="rshift">Сдвиг вправо (&gt;&gt;)</option>
+        <option value="bnot">НЕ (~a)</option>
       </select>
     </BaseNode>
   );
@@ -204,8 +204,8 @@ export const bitNodeDef: NodeDefinition<BitData> = {
     { id: 'a', label: 'a', type: 'number' },
     { id: 'b', label: 'b', type: 'number' },
   ],
-  outputs: [{ id: 'result', label: 'result', type: 'number' }],
-  defaultData: { op: 'band', label: 'AND (&)' },
+  outputs: [{ id: 'result', label: 'Результат', type: 'number' }],
+  defaultData: { op: 'band', label: 'И (&)' },
   component: BitNode,
   codegen: {
     evaluate: (node, ctx) => {
@@ -221,30 +221,30 @@ export const bitNodeDef: NodeDefinition<BitData> = {
 function ClampNode({ selected }: NodeProps) {
   return (
     <BaseNode
-      title="Clamp"
+      title="Ограничение (Clamp)"
       color="#0891b2"
       selected={selected}
       inputs={[
-        { id: 'value', label: 'value', type: 'number' },
-        { id: 'min', label: 'min', type: 'number' },
-        { id: 'max', label: 'max', type: 'number' },
+        { id: 'value', label: 'Значение', type: 'number' },
+        { id: 'min', label: 'Мин', type: 'number' },
+        { id: 'max', label: 'Макс', type: 'number' },
       ]}
-      outputs={[{ id: 'result', label: 'result', type: 'number' }]}
+      outputs={[{ id: 'result', label: 'Результат', type: 'number' }]}
     />
   );
 }
 
 export const clampNodeDef: NodeDefinition = {
   type: 'math_clamp',
-  label: 'Clamp',
+  label: 'Ограничение (Clamp)',
   category: 'Математика',
   color: '#0891b2',
   inputs: [
-    { id: 'value', label: 'value', type: 'number' },
-    { id: 'min', label: 'min', type: 'number' },
-    { id: 'max', label: 'max', type: 'number' },
+    { id: 'value', label: 'Значение', type: 'number' },
+    { id: 'min', label: 'Мин', type: 'number' },
+    { id: 'max', label: 'Макс', type: 'number' },
   ],
-  outputs: [{ id: 'result', label: 'result', type: 'number' }],
+  outputs: [{ id: 'result', label: 'Результат', type: 'number' }],
   component: ClampNode,
   codegen: {
     evaluate: (_node, ctx) =>

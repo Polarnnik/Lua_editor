@@ -7,35 +7,35 @@ import { literal, unaryOp, binaryOp, call } from '../ast/builders';
 function ConcatNode({ selected }: NodeProps) {
   return (
     <BaseNode
-      title="Concat (..)"
+      title="Конкатенация (..)"
       color="#db2777"
       selected={selected}
       inputs={[
         { id: 'a', label: 'a', type: 'string' },
         { id: 'b', label: 'b', type: 'string' },
       ]}
-      outputs={[{ id: 'result', label: 'result', type: 'string' }]}
+      outputs={[{ id: 'result', label: 'Результат', type: 'string' }]}
     />
   );
 }
 
 export const concatNodeDef: NodeDefinition = {
   type: 'string_concat',
-  label: 'Concat (..)',
+  label: 'Конкатенация (..)',
   category: 'Строки',
   color: '#db2777',
   inputs: [
     { id: 'a', label: 'a', type: 'string' },
     { id: 'b', label: 'b', type: 'string' },
   ],
-  outputs: [{ id: 'result', label: 'result', type: 'string' }],
+  outputs: [{ id: 'result', label: 'Результат', type: 'string' }],
   component: ConcatNode,
   codegen: {
     evaluate: (_node, ctx) =>
       binaryOp(
         '..',
         ctx.getInputDefault('a', literal('')),
-        ctx.getInputDefault('b', literal(''))
+        ctx.getInputDefault('b', literal('')),
       ),
   },
 };
@@ -43,22 +43,22 @@ export const concatNodeDef: NodeDefinition = {
 function StrLenNode({ selected }: NodeProps) {
   return (
     <BaseNode
-      title="Length (#)"
+      title="Длина (#)"
       color="#db2777"
       selected={selected}
-      inputs={[{ id: 'str', label: 'string', type: 'string' }]}
-      outputs={[{ id: 'result', label: 'length', type: 'number' }]}
+      inputs={[{ id: 'str', label: 'Строка', type: 'string' }]}
+      outputs={[{ id: 'result', label: 'Длина', type: 'number' }]}
     />
   );
 }
 
 export const strLenNodeDef: NodeDefinition = {
   type: 'string_len',
-  label: 'Length (#)',
+  label: 'Длина (#)',
   category: 'Строки',
   color: '#db2777',
-  inputs: [{ id: 'str', label: 'string', type: 'string' }],
-  outputs: [{ id: 'result', label: 'length', type: 'number' }],
+  inputs: [{ id: 'str', label: 'Строка', type: 'string' }],
+  outputs: [{ id: 'result', label: 'Длина', type: 'number' }],
   component: StrLenNode,
   codegen: {
     evaluate: (_node, ctx) =>
@@ -84,7 +84,7 @@ function ConvertNode({ id: nodeId, data, selected }: NodeProps) {
       outputs={[
         {
           id: 'result',
-          label: 'result',
+          label: 'Результат',
           type: fn === 'tostring' ? 'string' : 'number',
         },
       ]}

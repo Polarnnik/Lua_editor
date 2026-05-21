@@ -56,7 +56,7 @@ export const mathNodeDef: NodeDefinition<MathData> = {
       binaryOp(
         node.data.operator || '+',
         ctx.getInputDefault('a', literal(0)),
-        ctx.getInputDefault('b', literal(0))
+        ctx.getInputDefault('b', literal(0)),
       ),
   },
 };

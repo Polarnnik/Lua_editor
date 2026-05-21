@@ -7,12 +7,12 @@ import { whileStmt, forStmt, returnStmt, literal } from '../ast/builders';
 function WhileNode({ selected }: NodeProps) {
   return (
     <BaseNode
-      title="While Loop"
+      title="Цикл While"
       color="#065f46"
       selected={selected}
       inputs={[
-        { id: 'exec_in', label: 'exec', type: 'exec' },
-        { id: 'condition', label: 'condition', type: 'boolean' },
+        { id: 'exec_in', label: 'Выполнение', type: 'exec' },
+        { id: 'condition', label: 'Условие', type: 'boolean' },
       ]}
       outputs={[
         { id: 'loop_body', label: 'тело цикла', type: 'exec' },
@@ -24,12 +24,12 @@ function WhileNode({ selected }: NodeProps) {
 
 export const whileNodeDef: NodeDefinition = {
   type: 'flow_while',
-  label: 'While Loop',
+  label: 'Цикл While',
   category: 'Управление',
   color: '#065f46',
   inputs: [
-    { id: 'exec_in', label: 'exec', type: 'exec' },
-    { id: 'condition', label: 'condition', type: 'boolean' },
+    { id: 'exec_in', label: 'Выполнение', type: 'exec' },
+    { id: 'condition', label: 'Условие', type: 'boolean' },
   ],
   outputs: [
     { id: 'loop_body', label: 'тело цикла', type: 'exec' },
@@ -40,7 +40,7 @@ export const whileNodeDef: NodeDefinition = {
     execute: (_node, ctx, traverse) => [
       whileStmt(
         ctx.getInputDefault('condition', literal(false)),
-        traverse('loop_body')
+        traverse('loop_body'),
       ),
       ...traverse('exec_out'),
     ],
@@ -57,14 +57,14 @@ function ForNode({ id: nodeId, data, selected }: NodeProps) {
   const fd = data as ForData;
   return (
     <BaseNode
-      title="For Loop"
+      title="Цикл For"
       color="#065f46"
       selected={selected}
       inputs={[
-        { id: 'exec_in', label: 'exec', type: 'exec' },
-        { id: 'from', label: 'from', type: 'number' },
-        { id: 'to', label: 'to', type: 'number' },
-        { id: 'step', label: 'step', type: 'number' },
+        { id: 'exec_in', label: 'Выполнение', type: 'exec' },
+        { id: 'from', label: 'От', type: 'number' },
+        { id: 'to', label: 'До', type: 'number' },
+        { id: 'step', label: 'Шаг', type: 'number' },
       ]}
       outputs={[
         { id: 'loop_body', label: 'тело цикла', type: 'exec' },
@@ -83,14 +83,14 @@ function ForNode({ id: nodeId, data, selected }: NodeProps) {
 
 export const forNodeDef: NodeDefinition<ForData> = {
   type: 'flow_for',
-  label: 'For Loop',
+  label: 'Цикл For',
   category: 'Управление',
   color: '#065f46',
   inputs: [
-    { id: 'exec_in', label: 'exec', type: 'exec' },
-    { id: 'from', label: 'from', type: 'number' },
-    { id: 'to', label: 'to', type: 'number' },
-    { id: 'step', label: 'step', type: 'number' },
+    { id: 'exec_in', label: 'Выполнение', type: 'exec' },
+    { id: 'from', label: 'От', type: 'number' },
+    { id: 'to', label: 'До', type: 'number' },
+    { id: 'step', label: 'Шаг', type: 'number' },
   ],
   outputs: [
     { id: 'loop_body', label: 'тело цикла', type: 'exec' },
@@ -105,7 +105,7 @@ export const forNodeDef: NodeDefinition<ForData> = {
         ctx.getInputDefault('from', literal(1)),
         ctx.getInputDefault('to', literal(10)),
         traverse('loop_body'),
-        ctx.getInputDefault('step', literal(1))
+        ctx.getInputDefault('step', literal(1)),
       ),
       ...traverse('exec_out'),
     ],
@@ -115,12 +115,12 @@ export const forNodeDef: NodeDefinition<ForData> = {
 function ReturnNode({ selected }: NodeProps) {
   return (
     <BaseNode
-      title="Return"
+      title="Возврат"
       color="#991b1b"
       selected={selected}
       inputs={[
-        { id: 'exec_in', label: 'exec', type: 'exec' },
-        { id: 'value', label: 'value', type: 'any' },
+        { id: 'exec_in', label: 'Выполнение', type: 'exec' },
+        { id: 'value', label: 'Значение', type: 'any' },
       ]}
     />
   );
@@ -128,12 +128,12 @@ function ReturnNode({ selected }: NodeProps) {
 
 export const returnNodeDef: NodeDefinition = {
   type: 'flow_return',
-  label: 'Return',
+  label: 'Возврат',
   category: 'Управление',
   color: '#991b1b',
   inputs: [
-    { id: 'exec_in', label: 'exec', type: 'exec' },
-    { id: 'value', label: 'value', type: 'any' },
+    { id: 'exec_in', label: 'Выполнение', type: 'exec' },
+    { id: 'value', label: 'Значение', type: 'any' },
   ],
   component: ReturnNode,
   codegen: {

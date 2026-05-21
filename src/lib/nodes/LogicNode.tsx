@@ -40,7 +40,7 @@ export const logicIfDef: NodeDefinition<{ label?: string }> = {
       ifStmt(
         ctx.getInputDefault('condition', literal(false)),
         traverse('exec_true'),
-        traverse('exec_false')
+        traverse('exec_false'),
       ),
     ],
   },
