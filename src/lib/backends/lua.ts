@@ -128,7 +128,9 @@ function makePrinters(onError?: ErrorReporter) {
           '{' +
           node.fields
             .map((f) =>
-              f.key ? '[' + expr(f.key) + '] = ' + expr(f.value) : expr(f.value)
+              f.key
+                ? '[' + expr(f.key) + '] = ' + expr(f.value)
+                : expr(f.value),
             )
             .join(', ') +
           '}'

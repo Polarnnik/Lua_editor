@@ -80,7 +80,7 @@ export type NodeCodegenExecute<TData = Record<string, unknown>> = {
   execute: (
     node: { id: string; data: TData },
     ctx: GeneratorContext,
-    traverse: (handle: string) => import('./ast/types').Stmt[]
+    traverse: (handle: string) => import('./ast/types').Stmt[],
   ) => import('./ast/types').Stmt[];
 };
 
@@ -115,7 +115,7 @@ export interface CodeBackend {
   language: string;
   emit(
     ast: { type: 'Program'; body: unknown[] },
-    onError?: ErrorReporter
+    onError?: ErrorReporter,
   ): string;
 }
 

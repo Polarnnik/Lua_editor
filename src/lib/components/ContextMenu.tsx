@@ -93,12 +93,12 @@ export function ContextMenu({
               !pinFilter || pinFilter === 'exec'
                 ? !pinFilter || def.inputs?.some((p) => p.type === pinFilter)
                 : def.inputs?.some(
-                    (p) => p.type === pinFilter || p.type === 'any'
+                    (p) => p.type === pinFilter || p.type === 'any',
                   );
             return matchesSearch && matchesPin;
           }),
         ])
-        .filter(([, defs]) => (defs as NodeDefinition[]).length > 0)
+        .filter(([, defs]) => (defs as NodeDefinition[]).length > 0),
     );
 
     const hasResults = Object.keys(filtered).length > 0;
@@ -153,7 +153,7 @@ export function ContextMenu({
                   </button>
                 ))}
               </div>
-            )
+            ),
           )
         ) : (
           <div className="context-menu__no-results">Нет результатов</div>

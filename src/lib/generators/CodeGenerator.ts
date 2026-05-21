@@ -9,7 +9,7 @@ export class CodeGenerator {
   constructor(
     private registry: NodeRegistry,
     private backend: CodeBackend,
-    private onError?: ErrorReporter
+    private onError?: ErrorReporter,
   ) {}
 
   generate(nodes: Node[], edges: Edge[]): string {
@@ -19,10 +19,10 @@ export class CodeGenerator {
 
   private buildAST(nodes: Node[], edges: Edge[]): Program {
     const entryTypes = new Set(
-      this.registry.getEntryNodes().map((d) => d.type)
+      this.registry.getEntryNodes().map((d) => d.type),
     );
     const entryNodes = nodes.filter(
-      (n) => n.type !== undefined && entryTypes.has(n.type)
+      (n) => n.type !== undefined && entryTypes.has(n.type),
     );
 
     if (entryNodes.length === 0) return program([]);
@@ -33,10 +33,10 @@ export class CodeGenerator {
       nodes,
       edges,
       this.registry,
-      this.onError
+      this.onError,
     );
     const allStatements = entryNodes.flatMap((entryNode) =>
-      traverser.executeEntry(entryNode)
+      traverser.executeEntry(entryNode),
     );
 
     return program(allStatements);

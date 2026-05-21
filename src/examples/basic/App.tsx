@@ -45,7 +45,7 @@ export default function App() {
     '-- ПКМ на холсте — добавить узел\n' +
       '-- ПКМ на узле/связи — удалить\n' +
       '-- Ctrl+Z / Ctrl+Y — undo/redo\n' +
-      '-- Нажмите "Генерировать" чтобы получить Lua код'
+      '-- Нажмите "Генерировать" чтобы получить Lua код',
   );
   const [dark, setDark] = useState(false);
 
