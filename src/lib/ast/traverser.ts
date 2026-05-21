@@ -17,7 +17,7 @@ export class ASTTraverser {
     nodes: Node[],
     edges: Edge[],
     registry: NodeRegistry,
-    onError?: ErrorReporter
+    onError?: ErrorReporter,
   ) {
     this.nodes = nodes;
     this.edges = edges;
@@ -27,17 +27,23 @@ export class ASTTraverser {
 
   traverse(fromNodeId: string, sourceHandle: string): Stmt[] {
     const statements: Stmt[] = [];
-
     const outgoingEdges = this.edges.filter(
-      (e) => e.source === fromNodeId && e.sourceHandle === sourceHandle
+      (e) => e.source === fromNodeId && e.sourceHandle === sourceHandle,
     );
-
-    for (const edge of outgoingEdges) {
-      const targetNode = this.nodes.find((n) => n.id === edge.target);
-      if (!targetNode) continue;
-      statements.push(...this.executeNode(targetNode));
+    if (outgoingEdges.length > 1) {
+      this.onError?.({
+        kind: 'unsupported_ast_variant',
+        message: `Узел "${fromNodeId}" (${sourceHandle}): найдено ${outgoingEdges.length} исходящих exec-связей — используется только первая.`,
+        nodeId: fromNodeId,
+      });
     }
-
+    const edge = outgoingEdges[0];
+    if (edge) {
+      const targetNode = this.nodes.find((n) => n.id === edge.target);
+      if (targetNode) {
+        statements.push(...this.executeNode(targetNode));
+      }
+    }
     return statements;
   }
 
@@ -70,7 +76,7 @@ export class ASTTraverser {
     return codegen.execute(
       node as Parameters<typeof codegen.execute>[0],
       ctx,
-      (handle) => this.traverse(node.id, handle)
+      (handle) => this.traverse(node.id, handle),
     );
   }
 
@@ -112,7 +118,7 @@ export class ASTTraverser {
       const ctx = this.createContext(node);
       const result = codegen.evaluate(
         node as Parameters<typeof codegen.evaluate>[0],
-        ctx
+        ctx,
       );
       this.evaluatedNodes.set(node.id, result);
       return result;
@@ -138,10 +144,10 @@ export class ASTTraverser {
 
   private resolveSourceNode(
     targetNodeId: string,
-    targetHandleId: string
+    targetHandleId: string,
   ): Node | null {
     const edge = this.edges.find(
-      (e) => e.target === targetNodeId && e.targetHandle === targetHandleId
+      (e) => e.target === targetNodeId && e.targetHandle === targetHandleId,
     );
     if (!edge) return null;
     return this.nodes.find((n) => n.id === edge.source) ?? null;

@@ -18,6 +18,8 @@ import {
   Connection,
   Edge,
   Node,
+  NodeChange,
+  EdgeChange,
   ReactFlowProvider,
   useReactFlow,
   OnConnectEnd,
@@ -60,7 +62,7 @@ export interface VisualEditorHandle {
 }
 
 export interface VisualEditorProps {
-  nodes: NodeDefinition[];
+  nodes: readonly NodeDefinition[];
   backend?: CodeBackend;
   theme?: Partial<EditorTheme>;
   initialNodes?: Node[];
@@ -142,7 +144,7 @@ function VisualEditorInner({
         setNodes(snap.nodes);
         setEdges(snap.edges);
         onChange?.(toGraphSnapshot(snap));
-      }
+      },
     );
   }
 
@@ -168,6 +170,67 @@ function VisualEditorInner({
   const pushSnapshot = useCallback((nextNodes: Node[], nextEdges: Edge[]) => {
     store.current!.push({ nodes: nextNodes, edges: nextEdges });
   }, []);
+
+  const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dataTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextDebounce = useRef(false);
+
+  const scheduleCommit = useCallback(
+    (immediate: boolean) => {
+      if (commitTimer.current) clearTimeout(commitTimer.current);
+      if (immediate) {
+        skipNextDebounce.current = true;
+        commitTimer.current = setTimeout(() => {
+          pushSnapshot(nodesRef.current, edgesRef.current);
+          commitTimer.current = null;
+        }, 0);
+      }
+    },
+    [pushSnapshot],
+  );
+
+  // Wrap onNodesChange to capture drag-end and delete
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      onNodesChange(changes);
+      const needsCommit = changes.some(
+        (c) =>
+          c.type === 'remove' ||
+          (c.type === 'position' && 'dragging' in c && c.dragging === false),
+      );
+      if (needsCommit) {
+        scheduleCommit(true);
+      }
+    },
+    [onNodesChange, scheduleCommit],
+  );
+
+  // Wrap onEdgesChange to capture delete
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      onEdgesChange(changes);
+      if (changes.some((c) => c.type === 'remove')) {
+        scheduleCommit(true);
+      }
+    },
+    [onEdgesChange, scheduleCommit],
+  );
+
+  // Debounced snapshot for data changes (updateNodeData)
+  useEffect(() => {
+    if (skipNextDebounce.current) {
+      skipNextDebounce.current = false;
+      return;
+    }
+    if (dataTimer.current) clearTimeout(dataTimer.current);
+    dataTimer.current = setTimeout(() => {
+      pushSnapshot(nodes, edges);
+      dataTimer.current = null;
+    }, 400);
+    return () => {
+      if (dataTimer.current) clearTimeout(dataTimer.current);
+    };
+  }, [nodes, edges, pushSnapshot]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -230,7 +293,7 @@ function VisualEditorInner({
         pushSnapshot(next, currentEdges);
       }
     },
-    [pushSnapshot, setNodes]
+    [pushSnapshot, setNodes],
   );
 
   useImperativeHandle(
@@ -240,7 +303,7 @@ function VisualEditorInner({
         try {
           return new CodeGenerator(registry, backend, onError).generate(
             nodesRef.current,
-            edgesRef.current
+            edgesRef.current,
           );
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -273,30 +336,46 @@ function VisualEditorInner({
         return store.current!.canRedo();
       },
     }),
-    [registry, backend, onError]
+    [registry, backend, onError],
   );
 
   const isValidConnection = useCallback(
     (connection: Connection) =>
       validator.current.isValid(connection, nodesRef.current, edgesRef.current),
-    []
+    [],
   );
 
   const handleConnect = useCallback(
     (params: Connection | Edge) => {
+      const conn = params as Connection;
       setEdges((eds) => {
-        const next = addEdge(
-          {
-            ...params,
-            animated: Boolean(params.sourceHandle?.startsWith('exec')),
-          },
-          eds
-        );
+        let filtered = eds;
+        if (conn.source && conn.sourceHandle) {
+          const sourceNode = nodesRef.current.find((n) => n.id === conn.source);
+          if (sourceNode) {
+            const def = registry.get(sourceNode.type ?? '');
+            if (def) {
+              const sourcePin = def.outputs?.find(
+                (p) => p.id === conn.sourceHandle,
+              );
+              if (sourcePin?.type === 'exec') {
+                filtered = eds.filter(
+                  (e) =>
+                    !(
+                      e.source === conn.source &&
+                      e.sourceHandle === conn.sourceHandle
+                    ),
+                );
+              }
+            }
+          }
+        }
+        const next = addEdge({ ...params, animated: true }, filtered);
         pushSnapshot(nodesRef.current, next);
         return next;
       });
     },
-    [setEdges, pushSnapshot]
+    [setEdges, pushSnapshot, registry],
   );
 
   const pendingConnection = useRef<{
@@ -307,7 +386,7 @@ function VisualEditorInner({
   const onConnectStart = useCallback(
     (
       _: unknown,
-      params: { nodeId: string | null; handleId: string | null }
+      params: { nodeId: string | null; handleId: string | null },
     ) => {
       if (params.nodeId && params.handleId) {
         pendingConnection.current = {
@@ -316,7 +395,7 @@ function VisualEditorInner({
         };
       }
     },
-    []
+    [],
   );
 
   const onConnectEnd: OnConnectEnd = useCallback(
@@ -329,7 +408,7 @@ function VisualEditorInner({
       if (!pending) return;
 
       const sourceNode = nodesRef.current.find(
-        (n) => n.id === pending.sourceNodeId
+        (n) => n.id === pending.sourceNodeId,
       );
       if (!sourceNode) return;
 
@@ -354,7 +433,7 @@ function VisualEditorInner({
         pinFilter: pinType,
       });
     },
-    [registry, screenToFlowPosition]
+    [registry, screenToFlowPosition],
   );
 
   const handleAddNode = useCallback(
@@ -373,7 +452,7 @@ function VisualEditorInner({
         return next;
       });
     },
-    [registry, setNodes, pushSnapshot]
+    [registry, setNodes, pushSnapshot],
   );
 
   const handleCopyNode = useCallback((nodeId: string) => {
@@ -399,7 +478,7 @@ function VisualEditorInner({
         return next;
       });
     },
-    [setNodes, pushSnapshot]
+    [setNodes, pushSnapshot],
   );
 
   const handlePaste = useCallback(
@@ -425,7 +504,7 @@ function VisualEditorInner({
         return next;
       });
     },
-    [setNodes, pushSnapshot]
+    [setNodes, pushSnapshot],
   );
 
   const handleDeleteNode = useCallback(
@@ -434,7 +513,7 @@ function VisualEditorInner({
         const nextNodes = nds.filter((n) => n.id !== nodeId);
         setEdges((eds) => {
           const nextEdges = eds.filter(
-            (e) => e.source !== nodeId && e.target !== nodeId
+            (e) => e.source !== nodeId && e.target !== nodeId,
           );
           pushSnapshot(nextNodes, nextEdges);
           return nextEdges;
@@ -442,7 +521,7 @@ function VisualEditorInner({
         return nextNodes;
       });
     },
-    [setNodes, setEdges, pushSnapshot]
+    [setNodes, setEdges, pushSnapshot],
   );
 
   const handleDeleteEdge = useCallback(
@@ -453,7 +532,7 @@ function VisualEditorInner({
         return next;
       });
     },
-    [setEdges, pushSnapshot]
+    [setEdges, pushSnapshot],
   );
 
   const onPaneContextMenu = useCallback(
@@ -468,7 +547,7 @@ function VisualEditorInner({
         flowY: flowPos.y,
       });
     },
-    [screenToFlowPosition]
+    [screenToFlowPosition],
   );
 
   const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
@@ -496,8 +575,8 @@ function VisualEditorInner({
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={handleEdgesChange}
           onConnect={handleConnect}
           onConnectStart={onConnectStart}
           onConnectEnd={onConnectEnd}
@@ -545,7 +624,7 @@ const VisualEditor = forwardRef<VisualEditorHandle, VisualEditorProps>(
     <ReactFlowProvider>
       <VisualEditorInner {...props} editorRef={ref} />
     </ReactFlowProvider>
-  )
+  ),
 );
 
 VisualEditor.displayName = 'VisualEditor';
